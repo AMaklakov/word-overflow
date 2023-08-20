@@ -1,8 +1,0 @@
-services:
-  socket-server:
-    build: ./
-    # environment:
-    #   - PIV_SESSION_LIVETIME=${SESSION_LIVETIME}
-    ports:
-      - '5123:5123'
-    # restart: always
