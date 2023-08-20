@@ -1,32 +1,33 @@
 package word_overflow
 
 import (
+	"AMaklakov/word-overflow/analyzers"
 	"AMaklakov/word-overflow/common"
 	"log"
 	"time"
 )
 
 type Game struct {
-	Id      string        `json:"id"`
-	Words   []*Word       `json:"words"`
-	Stats   []*Stat       `json:"stats"`
-	Players []*Player     `json:"players"`
-	Config  *Config       `json:"config"`
-	IsEnd   bool          `json:"isEnd"`
-	Timeout int           `json:"timeout"`
-	Events  chan *Message `json:"-"`
+	Id       string        `json:"id"`
+	Words    []*Word       `json:"words"`
+	Stats    []*Stat       `json:"stats"`
+	Players  []*Player     `json:"players"`
+	Config   *Config       `json:"config"`
+	IsEnd    bool          `json:"isEnd"`
+	Timeout  int           `json:"timeout"`
+	EventsCh chan *Message `json:"-"`
 }
 
 func NewGame(id string, config *Config) *Game {
 	game := &Game{
-		Id:      id,
-		Words:   make([]*Word, 0),
-		Stats:   make([]*Stat, 0),
-		Players: make([]*Player, 0),
-		Config:  config,
-		IsEnd:   false,
-		Timeout: config.Timeout,
-		Events:  make(chan *Message, 10),
+		Id:       id,
+		Words:    make([]*Word, 0),
+		Stats:    make([]*Stat, 0),
+		Players:  make([]*Player, 0),
+		Config:   config,
+		IsEnd:    false,
+		Timeout:  config.Timeout,
+		EventsCh: make(chan *Message, 10),
 	}
 	game.init()
 	return game
@@ -45,7 +46,7 @@ func (g *Game) init() {
 }
 
 func (g *Game) Destroy() {
-	close(g.Events)
+	close(g.EventsCh)
 	for _, p := range g.Players {
 		close(p.Ch)
 	}
@@ -54,16 +55,23 @@ func (g *Game) Destroy() {
 func (g *Game) ProcessEvents() {
 	defer log.Println("Ending listening")
 
-	for m := range g.Events {
+	for m := range g.EventsCh {
 		switch m.Type {
-		case TypeKey:
+		case ClientTypeKey:
 			if !g.canPlay() {
 				continue
 			}
-			if updated := g.processKey(m.Payload.(string), m.Player); updated {
+
+			key := m.Payload.(string)
+			player := g.findPlayer(m.Player)
+			if updated := g.processKey(key, m.Player); updated {
 				g.NotifyPlayers()
+				go player.Analyze(key, analyzers.StatusSuccess)
+			} else {
+				go player.Analyze(key, analyzers.StatusError)
 			}
-		case TypeRestart:
+
+		case ClientTypeRestart:
 			g.init()
 			g.NotifyPlayers()
 			go g.countDown()
@@ -91,6 +99,15 @@ func (g *Game) AddPlayer() *Player {
 	return player
 }
 
+func (g *Game) findPlayer(color string) *Player {
+	for _, p := range g.Players {
+		if p.Color == color {
+			return p
+		}
+	}
+	return nil
+}
+
 func (g *Game) DeletePlayer(color string) (ok bool) {
 	players := make([]*Player, 0, len(g.Players)-1)
 	for _, p := range g.Players {
@@ -108,7 +125,7 @@ func (g *Game) DeletePlayer(color string) (ok bool) {
 func (g *Game) NotifyPlayers() {
 	g.UpdateStats()
 	for _, p := range g.Players {
-		p.Ch <- g
+		p.Ch <- &ClientMessage{ClientTypeData, g}
 	}
 }
 

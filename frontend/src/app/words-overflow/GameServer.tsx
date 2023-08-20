@@ -9,12 +9,13 @@ import { Words } from './Word'
 interface Props {
   sendKey: (key: string) => void
   data: IStateData
+  statistics: Record<string, string | number>
   onEnd: () => void
   onRestart: () => void
 }
 
 export default function Game(props: Props) {
-  const { data, onEnd, sendKey, onRestart } = props
+  const { data, onEnd, sendKey, onRestart, statistics } = props
   const { words, stats, isEnd } = data
 
   useLetterEvent(sendKey, !isEnd)
@@ -22,7 +23,7 @@ export default function Game(props: Props) {
   return (
     <>
       <Words words={words} />
-      <Stats stats={stats} />
+      <Stats stats={stats} statistics={statistics} />
       {isEnd && <GameOver stats={stats} onEnd={onEnd} onRestart={onRestart} />}
     </>
   )

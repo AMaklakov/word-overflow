@@ -1,6 +1,5 @@
 package word_overflow
 
-// TODO: add errors counter
 type Word struct {
 	Text    string `json:"text"`
 	Written int    `json:"written"`

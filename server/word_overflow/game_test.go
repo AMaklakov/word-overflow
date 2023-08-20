@@ -27,9 +27,9 @@ func TestGame(t *testing.T) {
 	}()
 
 	for i := 0; i < len(word.Text); i++ {
-		game.Events <- &Message{
+		game.EventsCh <- &Message{
 			Player:  player.Color,
-			Type:    TypeKey,
+			Type:    ClientTypeKey,
 			Payload: string(word.Text[i]),
 		}
 	}
@@ -62,9 +62,9 @@ func TestGameMultiplePlayersSameWord(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			for j := 0; j < len(word.Text); j++ {
-				game.Events <- &Message{
+				game.EventsCh <- &Message{
 					Player:  game.Players[i].Color,
-					Type:    TypeKey,
+					Type:    ClientTypeKey,
 					Payload: string(word.Text[j]),
 				}
 			}

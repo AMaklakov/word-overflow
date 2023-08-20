@@ -1,3 +1,4 @@
+import _ from 'lodash'
 import { IWord } from './Word'
 
 interface Stat {
@@ -40,8 +41,15 @@ export const GameOver = ({
   </div>
 )
 
-export const Stats = ({ stats }: { stats: IStats }) => (
+export const Stats = ({ stats, statistics }: { stats: IStats; statistics: Record<string, string | number> }) => (
   <div className="absolute left-0 right-0 bottom-5 flex justify-between text-3xl px-5 font-mono">
+    <div className="flex flex-col gap-2">
+      {_.entries(statistics).map(([key, value]) => (
+        <span key={key}>
+          {key}: {value}
+        </span>
+      ))}
+    </div>
     {stats.map((s) => (
       <span key={s.color} style={{ color: s.color }}>
         {s.words.length}

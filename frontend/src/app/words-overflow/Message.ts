@@ -15,7 +15,17 @@ export interface IRestartMessage {
   type: 'restart'
 }
 
-export type IMessage = IDataMessage | IRestartMessage | IKeyMessage
+export interface ICpmMessage {
+  type: 'cpm'
+  data: number
+}
+
+export interface ITyposMessage {
+  type: 'typos'
+  data: number
+}
+
+export type IMessage = IDataMessage | IRestartMessage | IKeyMessage | ICpmMessage | ITyposMessage
 
 export interface IStateData {
   id: string

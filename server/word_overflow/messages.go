@@ -1,9 +1,10 @@
 package word_overflow
 
 const (
-	TypeKey     = "key"
-	TypeRestart = "restart"
-	TypeData    = "data"
+	ClientTypeKey     = "key"
+	ClientTypeRestart = "restart"
+	ClientTypeData    = "data"
+	ClientTypeCpm     = "cpm"
 )
 
 type Message struct {

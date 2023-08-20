@@ -107,16 +107,16 @@ func GetSocket(w http.ResponseWriter, r *http.Request) {
 		}
 
 		switch message.Type {
-		case TypeKey:
-			game.Events <- &Message{
+		case ClientTypeKey:
+			game.EventsCh <- &Message{
 				Player:  player.Color,
-				Type:    TypeKey,
+				Type:    ClientTypeKey,
 				Payload: message.Data,
 			}
-		case TypeRestart:
-			game.Events <- &Message{
+		case ClientTypeRestart:
+			game.EventsCh <- &Message{
 				Player: player.Color,
-				Type:   TypeRestart,
+				Type:   ClientTypeRestart,
 			}
 		default:
 			log.Println("Unsupported message type", message)
@@ -124,17 +124,17 @@ func GetSocket(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func ListenAndSendMessages(ch <-chan any, conn *websocket.Conn) {
+func ListenAndSendMessages(ch <-chan *ClientMessage, conn *websocket.Conn) {
 	for msg := range ch {
-		if err := conn.WriteJSON(ClientMessage{TypeData, msg}); err != nil {
+		if err := conn.WriteJSON(msg); err != nil {
 			log.Println("Failed to write to conn: ", msg)
 		}
 	}
 }
 
 type ClientMessage struct {
-	Type string      `json:"type"`
-	Data interface{} `json:"data"`
+	Type string `json:"type"`
+	Data any    `json:"data"`
 }
 
 type KeyMessage struct {

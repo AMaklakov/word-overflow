@@ -5,7 +5,7 @@ import Game from '../GameServer'
 import { useRouter } from 'next/navigation'
 import { useMemo } from 'react'
 import { useObservableState } from 'observable-hooks'
-import { IDataMessage, IMessage } from '../Message'
+import { ICpmMessage, IDataMessage, IMessage, ITyposMessage } from '../Message'
 import { webSocket } from 'rxjs/webSocket'
 import CONFIG from '@/config'
 import { filter, map } from 'rxjs/operators'
@@ -24,6 +24,18 @@ export default function OnlineSever({ params }: any) {
     )
   )
   const [timeout, initialTimeout] = useMemo(() => [data?.timeout || 0, data?.config.timeout || 0], [data])
+  const [cpm = 0] = useObservableState(() =>
+    socket$.pipe(
+      filter((message) => message.type === 'cpm'),
+      map((message) => (message as ICpmMessage).data || 0)
+    )
+  )
+  const [typos = 0] = useObservableState(() =>
+    socket$.pipe(
+      filter((message) => message.type === 'typos'),
+      map((message) => (message as ITyposMessage).data || 0)
+    )
+  )
 
   const handleSendKey = (key: string) => socket$.next({ type: 'key', data: key })
 
@@ -44,6 +56,7 @@ export default function OnlineSever({ params }: any) {
     return (
       <Game
         data={data}
+        statistics={{ cpm, typos }}
         sendKey={handleSendKey}
         onEnd={() => nav.replace('/')}
         onRestart={() => socket$.next({ type: 'restart' })}
