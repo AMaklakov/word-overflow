@@ -1,4 +1,4 @@
-package word_overflow
+package common
 
 import (
 	"fmt"

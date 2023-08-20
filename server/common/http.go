@@ -1,9 +1,8 @@
-package word_overflow
+package common
 
 import (
 	"encoding/json"
 	"log"
-	"math/rand"
 	"net/http"
 )
 
@@ -26,13 +25,4 @@ func WriteJSON(w http.ResponseWriter, code int, message any) error {
 	}
 
 	return err
-}
-
-func getId(length int) string {
-	characters := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-	id := make([]byte, 0, length)
-	for i := 0; i < length; i++ {
-		id = append(id, characters[rand.Intn(len(characters))])
-	}
-	return string(id)
 }

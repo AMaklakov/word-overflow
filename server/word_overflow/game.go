@@ -1,6 +1,7 @@
 package word_overflow
 
 import (
+	"AMaklakov/word-overflow/common"
 	"log"
 	"time"
 )
@@ -18,7 +19,7 @@ type Game struct {
 
 func NewGame(id string, config *GameConfig) *Game {
 	words := make([]*Word, config.Words)
-	for i, text := range GenerateWords(config.Words) {
+	for i, text := range common.GenerateWords(config.Words) {
 		words[i] = NewWord(text, "")
 	}
 	game := &Game{

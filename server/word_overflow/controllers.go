@@ -1,8 +1,10 @@
 package word_overflow
 
 import (
+	"AMaklakov/word-overflow/common"
 	"encoding/json"
 	"log"
+	"math/rand"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -23,14 +25,14 @@ func CreateGame(w http.ResponseWriter, r *http.Request) {
 
 	var config GameConfig
 	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
-		WriteError(w, http.StatusBadRequest, "Request body is not valid")
+		common.WriteError(w, http.StatusBadRequest, "Request body is not valid")
 		return
 	}
 
 	game := NewGame(gameId, &config)
 	Games[gameId] = game
 
-	WriteJSON(w, http.StatusOK, game)
+	common.WriteJSON(w, http.StatusOK, game)
 }
 
 func GetGame(w http.ResponseWriter, r *http.Request) {
@@ -38,16 +40,16 @@ func GetGame(w http.ResponseWriter, r *http.Request) {
 	game := Games[gameId]
 
 	if game == nil {
-		WriteError(w, http.StatusNotFound, "No such game")
+		common.WriteError(w, http.StatusNotFound, "No such game")
 		return
 	}
 
 	if !game.CanJoin() {
-		WriteError(w, http.StatusForbidden, "Max game connections reached")
+		common.WriteError(w, http.StatusForbidden, "Max game connections reached")
 		return
 	}
 
-	WriteJSON(w, http.StatusOK, game)
+	common.WriteJSON(w, http.StatusOK, game)
 }
 
 var upgrader = websocket.Upgrader{
@@ -64,18 +66,18 @@ func GetSocket(w http.ResponseWriter, r *http.Request) {
 
 	// Create a new game if needed
 	if game == nil {
-		WriteError(w, http.StatusNotFound, "No such game")
+		common.WriteError(w, http.StatusNotFound, "No such game")
 		return
 	}
 	// Already full, rejecting
 	if !game.CanJoin() {
-		WriteError(w, http.StatusForbidden, "Max game connections reached")
+		common.WriteError(w, http.StatusForbidden, "Max game connections reached")
 		return
 	}
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		WriteError(w, http.StatusInternalServerError, "Cannot upgrade connection to WS")
+		common.WriteError(w, http.StatusInternalServerError, "Cannot upgrade connection to WS")
 		return
 	}
 
@@ -141,4 +143,13 @@ const (
 
 type KeyMessage struct {
 	Key string `json:"key"`
+}
+
+func getId(length int) string {
+	characters := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	id := make([]byte, 0, length)
+	for i := 0; i < length; i++ {
+		id = append(id, characters[rand.Intn(len(characters))])
+	}
+	return string(id)
 }
