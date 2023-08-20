@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { IWord, Words } from '@/app/words-overflow/Word'
+import { IWord, Words } from '@/app/words-overflow/Word 1'
 import { useRTC } from '@/useRtc'
 import _ from 'lodash'
 import { useDataChannel } from '@/useDataChannel'

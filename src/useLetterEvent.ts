@@ -9,8 +9,6 @@ export default function useLetterEvent(handler: (key: string) => void, shouldLis
 
     const handleKeyup = (e: KeyboardEvent) => KEYS.has(e.key) && handler(e.key)
     window.addEventListener('keyup', handleKeyup)
-    return () => {
-      window.removeEventListener('keyup', handleKeyup)
-    }
+    return () => window.removeEventListener('keyup', handleKeyup)
   }, [handler, shouldListen])
 }

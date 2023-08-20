@@ -14,21 +14,30 @@ const COLORS = ['#00AC11', '#E20101', '#E36D00', '#9000E9', '#F3DB00']
 
 export default function CreateGame({ params }: any) {
   const dc = useRTC(params.id, 'create')
-  return dc ? (
-    <Creator dc={dc} />
-  ) : (
-    <div>
-      <h2>Waiting for a friend to connect...</h2>
-      <p>
-        Send this code to your friend: <span className="text-5xl font-bold">{params.id}</span>
-      </p>
-    </div>
+  // return dc ? (
+  //   <Creator dc={dc} />
+  // ) : (
+  //   <div>
+  //     <h2>Waiting for a friend to connect...</h2>
+  //     <p>
+  //       Send this code to your friend: <span className="text-5xl font-bold">{params.id}</span>
+  //     </p>
+  //   </div>
+  // )
+  return (
+    <Creator
+      dc={{
+        addEventListener: _.noop,
+        removeEventListener: _.noop,
+        send: _.noop,
+      }}
+    />
   )
 }
 
 function Creator({ dc }: { dc: RTCDataChannel }) {
   const [currentColor, partnerColor] = useMemo(() => _.sampleSize(COLORS, 2), [])
-  const [words, setWords] = useState<IWord[]>(() => createWords(WORDS, 30))
+  const [words, setWords] = useState<IWord[]>(() => createWords(WORDS, 10))
   const [stats, setStats] = useState<IStats | null>(null)
 
   const handleType = useCallback((key: string, color: string) => setWords(updateWords(key, color)), [])

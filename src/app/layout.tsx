@@ -12,13 +12,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body
-        className={
-          inter.className + ' prose dark:prose-invert !max-w-[100%] px-4 sm:px-10 md:px-28 pt-2 relative min-h-screen'
-        }
-      >
-        <header className="flex sticky justify-between mb-5">
+    <html lang="en" className="h-[100%]">
+      <body className={inter.className + ' prose dark:prose-invert !max-w-[100%] pt-2 relative min-h-screen h-[100%]'}>
+        <header className="flex justify-between mb-5 px-4 sm:px-10 md:px-28">
           <nav>
             <Link href="/">
               <span className="text-3xl text-center">Word-overflow</span>

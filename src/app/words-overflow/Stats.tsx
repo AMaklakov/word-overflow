@@ -1,4 +1,4 @@
-import { IWord } from './Word'
+import { IWord } from './Word 1'
 
 interface Stat {
   color: string
@@ -12,7 +12,7 @@ export default function Stats({ stats }: { stats?: IStats | null }) {
   }
 
   return (
-    <div className="absolute p-5 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black text-white flex flex-col gap-2 border-white border-2 rounded-xl">
+    <div className="absolute p-5 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black text-white flex flex-col gap-2 border-white border-2 rounded-xl z-50">
       <h1 className="mb-5 text-white">Congratulations!</h1>
       {stats.map((s, i) => (
         <div key={i} className="flex justify-between">
