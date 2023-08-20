@@ -1,14 +1,14 @@
 package word_overflow
 
 type GameConfig struct {
-	Words   int
-	Players int
-	Timeout int
+	Words   int `json:"words"`
+	Players int `json:"players"`
+	Timeout int `json:"timeout"`
 }
 
 func NewDefaultConfig() *GameConfig {
 	return &GameConfig{
-		Words:   2,
+		Words:   20,
 		Players: 2,
 		Timeout: 10,
 	}

@@ -19,6 +19,7 @@ export interface ITimerMessage {
 export type IMessage = IDataMessage | ITimerMessage | IKeyMessage
 
 export interface IStateData {
+  id: string
   words: IWord[]
   stats: IStats
   isEnd: boolean
@@ -26,3 +27,13 @@ export interface IStateData {
 }
 
 export type IKeyData = string
+
+export interface ICreateGameConfig {
+  words: number
+  players: number
+  timeout: number
+}
+
+export interface IErrorMessage {
+  message: string
+}

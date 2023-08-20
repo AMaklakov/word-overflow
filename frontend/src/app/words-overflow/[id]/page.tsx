@@ -15,7 +15,7 @@ const API = CONFIG.API_URL
 export default function OnlineSever({ params }: any) {
   const nav = useRouter()
 
-  const socket$ = useMemo(() => webSocket<IMessage>(`ws://${API}/ws?gameId=${params.id}`), [params.id])
+  const socket$ = useMemo(() => webSocket<IMessage>(`ws://${API}/words-overflow/${params.id}/ws`), [params.id])
   const [data] = useObservableState(() =>
     socket$.pipe(
       filter((message) => message.type === 'data'),

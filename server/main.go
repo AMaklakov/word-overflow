@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 
 	"A.Maklakov/word-overflow/word_overflow"
@@ -11,6 +12,10 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/gorilla/websocket"
 )
+
+type ErrorBody struct {
+	Message string `json:"message"`
+}
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  0,
@@ -40,45 +45,91 @@ func main() {
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	}))
 
-	// r.Route("/games", func(r chi.Router) {
-	// 	r.Post("/", GetGames)
-	// })
-	r.Get("/ws", Websockets)
+	r.Route("/words-overflow", func(r chi.Router) {
+		r.Post("/", CreateGame)
+		r.Get("/{id}", GetGame)
+		r.Get("/{id}/ws", GetSocket)
+	})
 
 	http.ListenAndServe(":5123", r)
 }
 
-// func GetGames(w http.ResponseWriter, r *http.Request) {
-// 	data, err := json.Marshal(DB.GetGames())
-// 	if err != nil {
-// 		w.WriteHeader(http.StatusInternalServerError)
-// 		return
-// 	}
-// 	w.Write(data)
-// }
+const ID_LENGTH = 4
 
-func Websockets(w http.ResponseWriter, r *http.Request) {
-	gameId := r.URL.Query().Get("gameId")
+func CreateGame(w http.ResponseWriter, r *http.Request) {
+	gameId := getId(ID_LENGTH)
+	for Games[gameId] != nil {
+		gameId = getId(ID_LENGTH)
+	}
+
+	var config word_overflow.GameConfig
+	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		if body, err := json.Marshal(&ErrorBody{Message: "Request body is not valid"}); err == nil {
+			w.Write(body)
+		}
+		return
+	}
+
+	game := word_overflow.NewGame(gameId, &config)
+	Games[gameId] = game
+
+	writeGame(w, game)
+}
+
+func GetGame(w http.ResponseWriter, r *http.Request) {
+	gameId := chi.URLParam(r, "id")
+	game, ok := Games[gameId]
+	if !ok || !game.CanJoin() {
+		w.WriteHeader(http.StatusNotFound)
+		if body, err := json.Marshal(&ErrorBody{Message: "No such game"}); err == nil {
+			w.Write(body)
+		}
+		return
+	}
+
+	writeGame(w, game)
+}
+
+func writeGame(w http.ResponseWriter, game *word_overflow.Game) {
+	w.WriteHeader(http.StatusOK)
+	if body, err := json.Marshal(game); err == nil {
+		w.Write(body)
+	} else {
+		fmt.Printf("err: %v\n", err)
+	}
+}
+
+func GetSocket(w http.ResponseWriter, r *http.Request) {
+	gameId := chi.URLParam(r, "id")
 	game, ok := Games[gameId]
 
 	// Create a new game if needed
 	if !ok {
-		game = word_overflow.NewGame(gameId, word_overflow.NewDefaultConfig())
-		Games[gameId] = game
+		w.WriteHeader(http.StatusNotFound)
+		if body, err := json.Marshal(&ErrorBody{Message: "No such game"}); err == nil {
+			w.Write(body)
+		} else {
+			fmt.Printf("err: %v\n", err)
+		}
+		return
 	}
 
 	// Already full, rejecting
-	if game.Config.Players == len(game.Players) {
-		w.WriteHeader(http.StatusForbidden)
-		if message, err := json.Marshal(struct{ Error string }{Error: "Max connections reached"}); err == nil {
-			w.Write(message)
+	if !game.CanJoin() {
+		if body, err := json.Marshal(&ErrorBody{Message: "Max connections reached"}); err == nil {
+			w.Write(body)
 		}
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		if body, err := json.Marshal(&ErrorBody{Message: "Cannot upgrade to WS"}); err == nil {
+			w.Write(body)
+		}
 		return
 	}
 
@@ -113,7 +164,7 @@ func Websockets(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		fmt.Printf("message: %v\n", message)
+		// fmt.Printf("message: %v\n", message)
 
 		switch message.Type {
 		case word_overflow.KeyMessageType:
@@ -127,4 +178,13 @@ func Websockets(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("Unsupported datatype", message)
 		}
 	}
+}
+
+func getId(length int) string {
+	characters := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	id := make([]byte, 0, length)
+	for i := 0; i < length; i++ {
+		id = append(id, characters[rand.Intn(len(characters))])
+	}
+	return string(id)
 }

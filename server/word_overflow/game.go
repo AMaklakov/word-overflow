@@ -7,7 +7,7 @@ import (
 )
 
 type Game struct {
-	Id      string      `json:"gameId"`
+	Id      string      `json:"id"`
 	Words   []*Word     `json:"words"`
 	Stats   []*Stat     `json:"stats"`
 	Players []*Player   `json:"-"`
@@ -30,6 +30,10 @@ func NewGame(id string, config *GameConfig) *Game {
 		Config:  config,
 		Counter: config.Timeout,
 	}
+}
+
+func (g *Game) CanJoin() bool {
+	return len(g.Players) < g.Config.Players
 }
 
 func (g *Game) CanPlay() bool {
