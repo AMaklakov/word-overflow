@@ -1,126 +1,26 @@
 'use client'
 
-import { KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import WORDS from './words.json'
 import _ from 'lodash'
-import Word, { IWord } from '../Word'
+import { useRTC } from '@/useRtc'
+import { IWord, Words } from '@/app/Word'
+import { useDataChannel } from '@/useDataChannel'
 
-const config: RTCConfiguration = {
-  iceServers: [{ urls: 'stun:stun.services.mozilla.com' }, { urls: 'stun:stun.l.google.com:19302' }],
-}
-
-const post = async (body) => fetch('/api/rtc', { method: 'POST', body: JSON.stringify(body) }).then((r) => r.json())
-
-function onAddStream(event) {
-  console.log('stream', event)
-  //remoteVideo.srcObject = event.streams[0];
-  // remoteStream = event.streams[0];
-}
-
-const onicecandidate = (id, field) =>
-  function (event) {
-    console.log(`sending ice candidate`, event.candidate)
-    if (event.candidate) {
-      console.log()
-      post({ id, data: { [field]: event.candidate } })
-    }
-  }
-
-const wait = (n = 1000) => new Promise((res) => setTimeout(res, n))
-
-const create = (id, field) => {
-  const pc = (window.pc = new RTCPeerConnection(config))
-  // pc.onconnectionstatechange = console.log.bind(null, 'onconnectionstatechange')
-  pc.onicecandidate = onicecandidate(id, field)
-  pc.ontrack = onAddStream
-  return pc
-}
-
-const getResp = async (id: string, field) => {
-  while (true) {
-    const data = await post({ id })
-    if (data?.[field]) {
-      return data
-    }
-    console.count(`waiting ${field}`)
-    await wait()
-  }
-}
-
-const setRTC = async (id: string) => {
-  const pc = create(id, 'candidate1')
-  const dc = pc.createDataChannel(id, { ordered: true })
-  dc.onmessage = (event) => {
-    console.log('message from sub', event)
-    window.dispatchEvent(new CustomEvent('customMessage', { detail: event }))
-  }
-
-  window.dc = dc
-
-  const offer = await pc.createOffer()
-  await pc.setLocalDescription(offer)
-  await post({ id, data: { offer } })
-
-  let body = await getResp(id, 'answer')
-  await pc.setRemoteDescription(new RTCSessionDescription(body?.answer))
-
-  body = await getResp(id, 'candidate2')
-  await pc.addIceCandidate(new RTCIceCandidate(body['candidate2']))
-
-  pc.ondatachannel = console.log.bind(null, 'ondatachannel')
-
-  return pc
-}
+const COLORS = ['#00AC11', '#E20101', '#E36D00', '#9000E9', '#F3DB00']
 
 export default function CreateGame({ params }: any) {
-  const [pc, setPC] = useState<RTCPeerConnection | null>(null)
-  const [isReady, setIsReady] = useState(false)
-
-  useEffect(() => {
-    setRTC(params.id).then(setPC as any)
-  }, [params.id])
-
-  if (!pc) {
-    return <div>Waiting to connect...</div>
-  }
-  return <Creator />
+  const [dc, pc] = useRTC(params.id, 'create')
+  return pc && dc ? <Creator dc={dc} /> : <div>Waiting to connect...</div>
 }
 
-let sendQueue = [] as string[]
-function sendMessage(msg) {
-  const dataChannel = window.dc
-  switch (dataChannel.readyState) {
-    case 'connecting':
-      console.log(`Connection not open; queueing: ${msg}`)
-      sendQueue.push(msg)
-      break
-    case 'open':
-      sendQueue.push(msg)
-      sendQueue.forEach((msg) => dataChannel.send(msg))
-      sendQueue = []
+function Creator({ dc }: { dc: RTCDataChannel }) {
+  const [currentColor, partnerColor] = useMemo(() => _.sampleSize(COLORS, 2), [])
+  const [words, setWords] = useState<IWord[]>(() => _.sampleSize(WORDS, 50).map((x) => ({ text: x, written: 0 })))
 
-      break
-    case 'closing':
-      console.log(`Attempted to send message while closing: ${msg}`)
-      break
-    case 'closed':
-      console.log('Error! Attempt to send while connection closed.')
-      break
-  }
-}
-
-function Creator() {
-  const [words, setWords] = useState<IWord[]>(() => _.sampleSize(WORDS, 10).map((x) => ({ text: x, written: 0 })))
-
-  useEffect(() => {
-    setInterval(() => {
-      setWords((w) => [...w, { text: _.sample(WORDS)!, written: 0 }])
-    }, 3000)
-  }, [])
-
-  const handleType = useCallback((letter: string, color: string = 'green') => {
+  const handleType = useCallback((letter: string, color: string) => {
     setWords((words) => {
-      let index = _.findIndex(words, (w) => w.written !== 0 && w.color === color)
+      let index = _.findLastIndex(words, (w) => w.written !== 0 && w.color === color)
       const nextLetter = words[index]?.text.substring(words[index].written)[0]
       if (index >= 0) {
         if (nextLetter?.toLowerCase() !== letter.toLowerCase()) {
@@ -132,40 +32,32 @@ function Creator() {
         return words.map((w, i) => (i === index ? { ...w, written: w.written + 1 } : w))
       }
 
-      index = _.findIndex(words, (w) => w.written === 0 && !w.color && w.text.startsWith(letter))
+      index = _.findLastIndex(words, (w) => w.written === 0 && !w.color && w.text.startsWith(letter))
       if (index < 0) return words
       return words.map((w, i) => (i === index ? { ...w, written: w.written + 1, color } : w))
     })
   }, [])
 
   useEffect(() => {
-    const f = (e) => handleType(e.key)
+    const f = (e) => handleType(e.key, currentColor)
     window.addEventListener('keyup', f)
     return () => {
       window.removeEventListener('keyup', f)
     }
-  }, [handleType])
+  }, [currentColor, handleType])
 
-  useEffect(() => {
-    const f = (event) => {
-      console.log('received', event.detail)
-      handleType(event.detail.data, 'blue')
-    }
-    window.addEventListener('customMessage', f)
-    return () => {
-      window.removeEventListener('customMessage', f)
-    }
-  }, [handleType])
-
+  const handleMessage = useCallback(
+    (event: MessageEvent<any>) => handleType(event.data, partnerColor),
+    [handleType, partnerColor]
+  )
+  const [sendMessage] = useDataChannel(dc, handleMessage)
   useEffect(() => {
     sendMessage(JSON.stringify(words))
-  }, [words])
+  }, [sendMessage, words])
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {words.map((w) => (
-        <Word key={w.text} word={w} />
-      ))}
+    <div className="w-screen px-28">
+      <Words words={words} />
     </div>
   )
 }
