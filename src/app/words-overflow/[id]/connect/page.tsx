@@ -30,7 +30,7 @@ function Sub({ dc, onEnd }: { dc: RTCDataChannel; onEnd: () => void }) {
   const [sendMessage] = useDataChannel<IResponseMessage, IMessage>(dc, handleMessage)
 
   const handleKey = useCallback((key: string) => sendMessage({ key }), [sendMessage])
-  useLetterEvent(handleKey, !stats)
+  useLetterEvent(handleKey, !isEnd)
 
   return (
     <>

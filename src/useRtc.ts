@@ -34,33 +34,45 @@ export const useRTC = (channelId: string, type: 'create' | 'connect') => {
 
 const createRTCConnection = async (id: string, channel$: BehaviorSubject<RTCDataChannel | null>) => {
   let dc: RTCDataChannel | null
+  let pc: RTCPeerConnection | null
 
   const stream = await createStream(id)
-  const pc = new RTCPeerConnection(CONFIG)
-  // pc.onconnectionstatechange = console.log.bind(null, 'onconnectionstatechange')
-  pc.onicecandidate = (event) => {
-    event.candidate && stream.publish(Messages.CandidateOffer, event.candidate.toJSON())
-  }
-  pc.ontrack = (event) => {
-    console.log('on add stream', event)
+
+  async function getPC() {
+    if (pc) {
+      pc.close()
+    }
+
+    pc = new RTCPeerConnection(CONFIG)
+    // pc.onconnectionstatechange = console.log.bind(null, 'onconnectionstatechange')
+    pc.onicecandidate = (event) => {
+      event.candidate && stream.publish(Messages.CandidateOffer, event.candidate.toJSON())
+    }
+    pc.ontrack = (event) => {
+      console.log('on add stream', event)
+    }
   }
 
+  await getPC()
+
   await stream.subscribe(Messages.Answer, (message) => {
-    pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(message.data)))
+    pc?.setRemoteDescription(new RTCSessionDescription(JSON.parse(message.data)))
   })
   await stream.subscribe(Messages.CandidateAnswer, (message) => {
-    pc.addIceCandidate(new RTCIceCandidate(message.data))
+    pc?.addIceCandidate(new RTCIceCandidate(message.data))
     if (dc) {
       channel$.next(dc)
     }
   })
 
   await stream.subscribe(Messages.ReadyForConnection, async (message) => {
-    // ! Order of creation is important
-    dc = pc.createDataChannel(id, { ordered: true })
+    await getPC()
 
-    const offer = await pc.createOffer()
-    await pc.setLocalDescription(offer)
+    // ! Order of creation is important
+    dc = pc!.createDataChannel(id, { ordered: true })
+
+    const offer = await pc?.createOffer()
+    await pc?.setLocalDescription(offer)
 
     await stream.publish(Messages.Offer, JSON.stringify(offer))
   })
@@ -71,31 +83,44 @@ const createRTCConnection = async (id: string, channel$: BehaviorSubject<RTCData
 
 const connectToRTC = async (id: string, channel$: BehaviorSubject<RTCDataChannel | null>) => {
   const stream = await createStream(id)
-  const pc = new RTCPeerConnection(CONFIG)
-  // pc.onconnectionstatechange = console.log.bind(null, 'onconnectionstatechange')
-  pc.onicecandidate = (event) => {
-    event.candidate && stream.publish(Messages.CandidateAnswer, event.candidate.toJSON())
-  }
-  pc.ontrack = (event) => {
-    console.log('on add stream', event)
-  }
-  pc.ondatachannel = (event) => {
-    // the most important code
-    event.channel.onclosing = console.warn
-    event.channel.onerror = console.error
-    channel$.next(event.channel)
-  }
-  await stream.subscribe(Messages.Offer, async (message) => {
-    pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(message.data)))
+  let pc: RTCPeerConnection | null
 
-    const answer = await pc.createAnswer()
-    await pc.setLocalDescription(answer)
+  async function getPC() {
+    if (pc) {
+      pc.close()
+    }
+
+    pc = new RTCPeerConnection(CONFIG)
+    // pc.onconnectionstatechange = console.log.bind(null, 'onconnectionstatechange')
+    pc.onicecandidate = (event) => {
+      event.candidate && stream.publish(Messages.CandidateAnswer, event.candidate.toJSON())
+    }
+    pc.ontrack = (event) => {
+      console.log('on add stream', event)
+    }
+    pc.ondatachannel = (event) => {
+      // the most important code
+      event.channel.onclosing = console.warn
+      event.channel.onerror = console.error
+      channel$.next(event.channel)
+    }
+  }
+  await getPC()
+
+  await stream.subscribe(Messages.Offer, async (message) => {
+    pc!.setRemoteDescription(new RTCSessionDescription(JSON.parse(message.data)))
+
+    const answer = await pc!.createAnswer()
+    await pc!.setLocalDescription(answer)
     stream.publish(Messages.Answer, JSON.stringify(answer))
   })
-  await stream.subscribe(Messages.CandidateOffer, (message) => {
-    pc.addIceCandidate(new RTCIceCandidate(message.data))
+  await stream.subscribe(Messages.CandidateOffer, async (message) => {
+    pc!.addIceCandidate(new RTCIceCandidate(message.data))
   })
-  await stream.subscribe(Messages.ReadyForCreation, () => stream.publish(Messages.ReadyForConnection, {}))
+  await stream.subscribe(Messages.ReadyForCreation, async () => {
+    await getPC()
+    stream.publish(Messages.ReadyForConnection, {})
+  })
   await stream.publish(Messages.ReadyForConnection, {})
 
   return stream
