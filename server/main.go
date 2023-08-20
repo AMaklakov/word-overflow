@@ -4,6 +4,7 @@ import (
 	"AMaklakov/word-overflow/word_overflow"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 
@@ -12,10 +13,6 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/gorilla/websocket"
 )
-
-type ErrorBody struct {
-	Message string `json:"message"`
-}
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  0,
@@ -64,10 +61,7 @@ func CreateGame(w http.ResponseWriter, r *http.Request) {
 
 	var config word_overflow.GameConfig
 	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		if body, err := json.Marshal(&ErrorBody{Message: "Request body is not valid"}); err == nil {
-			w.Write(body)
-		}
+		sendError(w, http.StatusBadRequest, "Request body is not valid")
 		return
 	}
 
@@ -81,10 +75,7 @@ func GetGame(w http.ResponseWriter, r *http.Request) {
 	gameId := chi.URLParam(r, "id")
 	game, ok := Games[gameId]
 	if !ok || !game.CanJoin() {
-		w.WriteHeader(http.StatusNotFound)
-		if body, err := json.Marshal(&ErrorBody{Message: "No such game"}); err == nil {
-			w.Write(body)
-		}
+		sendError(w, http.StatusNotFound, "No such game")
 		return
 	}
 
@@ -106,30 +97,19 @@ func GetSocket(w http.ResponseWriter, r *http.Request) {
 
 	// Create a new game if needed
 	if !ok {
-		w.WriteHeader(http.StatusNotFound)
-		if body, err := json.Marshal(&ErrorBody{Message: "No such game"}); err == nil {
-			w.Write(body)
-		} else {
-			fmt.Printf("err: %v\n", err)
-		}
+		sendError(w, http.StatusNotFound, "No such game")
 		return
 	}
 
 	// Already full, rejecting
 	if !game.CanJoin() {
-		if body, err := json.Marshal(&ErrorBody{Message: "Max connections reached"}); err == nil {
-			w.Write(body)
-		}
-		w.WriteHeader(http.StatusForbidden)
+		sendError(w, http.StatusForbidden, "Max game connections reached")
 		return
 	}
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		if body, err := json.Marshal(&ErrorBody{Message: "Cannot upgrade to WS"}); err == nil {
-			w.Write(body)
-		}
+		sendError(w, http.StatusInternalServerError, "Cannot upgrade connection to WS")
 		return
 	}
 
@@ -146,6 +126,7 @@ func GetSocket(w http.ResponseWriter, r *http.Request) {
 			game.UpdateStats()
 			game.WriteToAll(word_overflow.Message{word_overflow.DataMessageType, game})
 		} else {
+			log.Println("Deleting game ", gameId)
 			delete(Games, gameId)
 		}
 	}()
@@ -159,8 +140,7 @@ func GetSocket(w http.ResponseWriter, r *http.Request) {
 		var message word_overflow.Message
 		err := conn.ReadJSON(&message)
 		if err != nil {
-			fmt.Printf("err: %v\n", err)
-			w.WriteHeader(http.StatusInternalServerError)
+			sendError(w, http.StatusBadRequest, "Message is not valid")
 			return
 		}
 
