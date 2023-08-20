@@ -1,12 +1,11 @@
 package main
 
 import (
+	"AMaklakov/word-overflow/word_overflow"
 	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/http"
-
-	"AMaklakov/word-overflow/app/word_overflow"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -52,7 +51,7 @@ func main() {
 		r.Get("/{id}/ws", GetSocket)
 	})
 
-	http.ListenAndServe(":8080", r)
+	http.ListenAndServe(":5123", r)
 }
 
 const ID_LENGTH = 4
