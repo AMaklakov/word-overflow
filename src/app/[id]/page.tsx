@@ -11,8 +11,8 @@ import Stats from '@/app/Stats'
 const COLORS = ['#00AC11', '#E20101', '#E36D00', '#9000E9', '#F3DB00']
 
 export default function CreateGame({ params }: any) {
-  const [dc, pc] = useRTC(params.id, 'create')
-  return dc && pc ? <Creator dc={dc} /> : <div>Waiting to connect...</div>
+  const dc = useRTC(params.id, 'create')
+  return dc ? <Creator dc={dc} /> : <div>Waiting to connect...</div>
 }
 
 function Creator({ dc }: { dc: RTCDataChannel }) {
