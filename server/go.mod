@@ -1,4 +1,4 @@
-module A.Maklakov/word-overflow
+module AMaklakov/word-overflow
 
 go 1.20
 
