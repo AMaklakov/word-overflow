@@ -10,16 +10,18 @@ import { IWord, Words } from './Word'
 import WORDS from './words.json'
 
 const COLORS = ['#00AC11', '#E20101', '#E36D00', '#9000E9', '#F3DB00']
+const N = 1
 
-export default function GameServer({ dc }: { dc?: RTCDataChannel }) {
+export default function GameServer({ dc, onEnd }: { dc?: RTCDataChannel; onEnd: () => void }) {
   const [currentColor, partnerColor] = useMemo(() => _.sampleSize(COLORS, 2), [])
-  const [words, setWords] = useState<IWord[]>(() => createWords(WORDS, 30))
-  const [isEnd, setIsEnd] = useState(false)
+  const [words, setWords] = useState<IWord[]>(() => createWords(WORDS, N))
+  const isEnd = useMemo(() => _.every(words, (w) => w.text.length === w.written), [words])
 
   const handleType = useCallback((key: string, color: string) => setWords(updateWords(key, color)), [])
   const handleKey = useCallback((key: string) => handleType(key, currentColor), [currentColor, handleType])
   useLetterEvent(handleKey, !isEnd)
 
+  // TODO: maybe debounce?
   const deferredWords = useDeferredValue(words)
   const stats = useMemo<IStats>(
     () => [
@@ -35,14 +37,16 @@ export default function GameServer({ dc }: { dc?: RTCDataChannel }) {
   )
   const [sendMessage] = useDataChannel<IMessage, IResponseMessage>(dc, handleMessage)
   useEffect(() => {
-    sendMessage({ words, stats })
-  }, [sendMessage, stats, words])
+    sendMessage({ words, stats, isEnd })
+  }, [isEnd, sendMessage, stats, words])
+
+  const handleRestart = useCallback(() => setWords(createWords(WORDS, N)), [])
 
   return (
     <>
       <Words words={words} />
-      <Stats stats={stats} />
-      {/* <GameOver stats={stats} /> */}
+      {!!dc && <Stats stats={stats} />}
+      {isEnd && <GameOver stats={stats} onEnd={onEnd} onRestart={handleRestart} />}
     </>
   )
 }
