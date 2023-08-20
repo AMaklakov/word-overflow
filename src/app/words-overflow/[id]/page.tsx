@@ -4,9 +4,11 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'rea
 import WORDS from './words.json'
 import _ from 'lodash'
 import { useRTC } from '@/useRtc'
-import { IWord, Words } from '@/app/Word'
+import { IWord, Words } from '@/app/words-overflow/Word'
 import { useDataChannel } from '@/useDataChannel'
-import Stats from '@/app/Stats'
+import Stats, { IStats } from '@/app/words-overflow/Stats'
+import { IMessage, IResponseMessage } from '@/app/words-overflow/Message'
+import useLetterEvent from '@/useLetterEvent'
 
 const COLORS = ['#00AC11', '#E20101', '#E36D00', '#9000E9', '#F3DB00']
 
@@ -26,27 +28,12 @@ export default function CreateGame({ params }: any) {
 
 function Creator({ dc }: { dc: RTCDataChannel }) {
   const [currentColor, partnerColor] = useMemo(() => _.sampleSize(COLORS, 2), [])
-  const [words, setWords] = useState<IWord[]>(() => createWords(WORDS, 5))
-  const [stats, setStats] = useState<any>(null)
+  const [words, setWords] = useState<IWord[]>(() => createWords(WORDS, 30))
+  const [stats, setStats] = useState<IStats | null>(null)
 
-  const handleType = useCallback((letter: string, color: string) => setWords(updateWords(letter, color)), [])
-
-  useEffect(() => {
-    const f = (e) => handleType(e.key, currentColor)
-    window.addEventListener('keyup', f)
-    return () => {
-      window.removeEventListener('keyup', f)
-    }
-  }, [currentColor, handleType, stats])
-
-  const handleMessage = useCallback(
-    (event: MessageEvent<any>) => handleType(event.data, partnerColor),
-    [handleType, partnerColor]
-  )
-  const [sendMessage] = useDataChannel(dc, handleMessage)
-  useEffect(() => {
-    sendMessage(JSON.stringify(words))
-  }, [sendMessage, words])
+  const handleType = useCallback((key: string, color: string) => setWords(updateWords(key, color)), [])
+  const handleKey = useCallback((key: string) => handleType(key, currentColor), [currentColor, handleType])
+  useLetterEvent(handleKey, !stats)
 
   const deferredWords = useDeferredValue(words)
   useEffect(() => {
@@ -56,9 +43,17 @@ function Creator({ dc }: { dc: RTCDataChannel }) {
         { color: partnerColor, words: _.filter(deferredWords, { color: partnerColor }) },
       ]
       setStats(stats)
-      sendMessage(JSON.stringify(stats))
     }
-  }, [currentColor, deferredWords, partnerColor, sendMessage])
+  }, [currentColor, deferredWords, partnerColor])
+
+  const handleMessage = useCallback(
+    (m: IResponseMessage) => handleType(m.key, partnerColor),
+    [handleType, partnerColor]
+  )
+  const [sendMessage] = useDataChannel<IMessage, IResponseMessage>(dc, handleMessage)
+  useEffect(() => {
+    sendMessage({ words, stats })
+  }, [sendMessage, stats, words])
 
   return (
     <>

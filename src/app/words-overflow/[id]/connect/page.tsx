@@ -1,38 +1,32 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
-import { IWord, Words } from '@/app/Word'
+import { useCallback, useState } from 'react'
+import { IWord, Words } from '@/app/words-overflow/Word'
 import { useRTC } from '@/useRtc'
 import _ from 'lodash'
 import { useDataChannel } from '@/useDataChannel'
-import Stats from '@/app/Stats'
+import Stats, { IStats } from '@/app/words-overflow/Stats'
+import { IMessage, IResponseMessage } from '@/app/words-overflow/Message'
+import useLetterEvent from '@/useLetterEvent'
 
 export default function ConnectGame({ params }: any) {
-  console.log(params)
   const dc = useRTC(params.id, 'connect')
   return dc ? <Sub dc={dc} /> : <div>Connecting to the game...</div>
 }
 
 function Sub({ dc }: { dc: RTCDataChannel }) {
   const [words, setWords] = useState<IWord[]>([])
-  const [stats, setStats] = useState<any>(null)
+  const [stats, setStats] = useState<IStats | null>(null)
 
-  const handleMessage = useCallback((event: MessageEvent<any>) => {
-    const data = JSON.parse(event.data)
-    data.length === 2 ? setStats(data) : setWords(data)
+  const handleMessage = useCallback((message: IMessage) => {
+    setWords(message.words)
+    setStats(message.stats)
   }, [])
 
-  const [sendMessage] = useDataChannel(dc, handleMessage)
+  const [sendMessage] = useDataChannel<IResponseMessage, IMessage>(dc, handleMessage)
 
-  useEffect(() => {
-    if (stats) return
-
-    const f = (e) => sendMessage(e.key)
-    window.addEventListener('keyup', f)
-    return () => {
-      window.removeEventListener('keyup', f)
-    }
-  }, [sendMessage, stats])
+  const handleKey = useCallback((key: string) => sendMessage({ key }), [sendMessage])
+  useLetterEvent(handleKey, !stats)
 
   return (
     <>

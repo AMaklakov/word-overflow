@@ -1,6 +1,12 @@
 import { IWord } from './Word'
 
-export default function Stats({ stats }: { stats?: { color: string; words: IWord[] }[] }) {
+interface Stat {
+  color: string
+  words: IWord[]
+}
+export type IStats = Stat[]
+
+export default function Stats({ stats }: { stats?: IStats | null }) {
   if (!stats) {
     return null
   }
