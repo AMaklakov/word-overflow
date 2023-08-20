@@ -66,9 +66,9 @@ func (g *Game) ProcessEvents() {
 			player := g.findPlayer(m.Player)
 			if updated := g.processKey(key, m.Player); updated {
 				g.NotifyPlayers()
-				go player.Analyze(key, analyzers.StatusSuccess)
+				player.Analyze(key, analyzers.StatusSuccess)
 			} else {
-				go player.Analyze(key, analyzers.StatusError)
+				player.Analyze(key, analyzers.StatusError)
 			}
 
 		case ClientTypeRestart:
