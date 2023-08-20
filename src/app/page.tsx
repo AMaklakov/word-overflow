@@ -12,6 +12,9 @@ export default function Home() {
       <Link href={`/${id}?owner=true`} prefetch={false}>
         Create Game
       </Link>
+      <Link href={`/${id}`} prefetch={false}>
+        Join Game
+      </Link>
     </div>
   )
 }

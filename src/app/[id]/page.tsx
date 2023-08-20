@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 const config: RTCConfiguration = {
   iceServers: [{ urls: 'stun:stun.services.mozilla.com' }, { urls: 'stun:stun.l.google.com:19302' }],
@@ -32,7 +32,7 @@ const wait = (n = 1000) => new Promise((res) => setTimeout(res, n))
 
 const create = (id, field) => {
   const pc = (window.pc = new RTCPeerConnection(config))
-  pc.onconnectionstatechange = console.log.bind(null, 'onconnectionstatechange')
+  // pc.onconnectionstatechange = console.log.bind(null, 'onconnectionstatechange')
   pc.onicecandidate = onicecandidate(id, field)
   pc.ontrack = onAddStream
   return pc
@@ -54,7 +54,11 @@ const getResp = async (id: string, field) => {
 const setRTC = async (id: string) => {
   const pc = create(id, 'candidate1')
   const dc = pc.createDataChannel(id, { ordered: true })
-  dc.onmessage = console.log.bind(null, 'message from sub')
+  dc.onmessage = (event) => {
+    console.log('message from sub', event)
+    window.dispatchEvent(new CustomEvent('customMessage', { detail: event }))
+  }
+
   window.dc = dc
 
   const offer = await pc.createOffer()
@@ -89,6 +93,7 @@ const connectRTC = async (id: string) => {
     window.dc = event.channel
     window.dc.onmessage = (event) => {
       console.log('get message from author', event)
+      window.dispatchEvent(new CustomEvent('customMessage', { detail: event }))
     }
   }
 
@@ -106,23 +111,162 @@ export default function Home({ params, searchParams }: any) {
       connectRTC(params.id).then(setPC as any)
     }
   }, [params.id, searchParams.owner])
-  // console.log('aaa', pc, pc?.connectionState)
+
+  if (!pc) {
+    return <div>Connecting...</div>
+  }
+  return searchParams.owner === 'true' ? <Creator /> : <Sub />
+}
+
+const MAX = 7
+
+const lerp = (start, end, t) => start * (1 - t) + end * t
+
+function Creator() {
+  const [words, setWords] = useState<{ id: number; label: string }[]>([])
+  const [started, setStarted] = useState(false)
+
+  const onAddWord = (word) => {
+    const w = {
+      id: Date.now(),
+      label: word,
+    }
+
+    setWords([...words, w])
+    if (words.length === 2) {
+      setStarted(true)
+    }
+  }
+
+  useEffect(() => {
+    if (started) {
+      console.count('sending')
+      window.dc?.send(JSON.stringify(words))
+    }
+  }, [started, words])
 
   // useEffect(() => {
-  //   const dc =
-  //   if (dc) {
-  //     setDC(dc)¨
-  //   }
-  // }, [pc])
+  //   console.log('checking', window.dc)
+  //   if (window.dc) {
+  //     window.dc.onmessage = (event) => {
 
-  const [message, setMessage] = useState('')
-  const sendMessage = () => {
-    window.dc?.send(message)
+  //     }
+  //   }
+  // }, [])
+
+  useEffect(() => {
+    const f = (event) => {
+      const word = event.detail.data
+      setWords((w) => w.filter((x) => x.label.toLowerCase() !== word.toLowerCase()))
+    }
+    window.addEventListener('customMessage', f)
+    return () => {
+      window.removeEventListener('customMessage', f)
+    }
+  }, [])
+
+  const state = useMemo(() => {
+    if (started && MAX < words.length) {
+      return 'You win!'
+    }
+    if (started && words.length === 0) {
+      return 'You loose!'
+    }
+    return null
+  }, [started, words.length])
+
+  if (state) {
+    return <div className="text-red-200 text-7xl w-screen h-screen flex justify-center items-center">{state}</div>
+  }
+
+  return (
+    <Input onSubmit={onAddWord}>
+      {words.map((w, index) => (
+        <Word key={w.id} label={w.label} color={`rgba(0, 255, 0, ${1 / (7 - index)})`} />
+      ))}
+    </Input>
+  )
+}
+
+function Sub() {
+  const [words, setWords] = useState<{ id: number; label: string }[]>([])
+  const [started, setStarted] = useState(false)
+
+  const onRemoveWord = (word) => {
+    window.dc?.send(word)
+  }
+
+  useEffect(() => {
+    // console.log('checking', window.dc)
+    // if (window.dc) {
+    //   window.dc.onmessage = (event) => {
+    //     const words = JSON.parse(event.data)
+    //     setWords(words.reverse())
+    //     setStarted(true)
+    //   }
+    // }
+    const f = (event) => {
+      console.log('event', event)
+      const words = JSON.parse(event.detail.data)
+      setWords(words.reverse())
+      setStarted(true)
+    }
+    window.addEventListener('customMessage', f)
+    return () => {
+      window.removeEventListener('customMessage', f)
+    }
+  }, [])
+
+  const state = useMemo(() => {
+    if (started && MAX < words.length) {
+      return 'You loose!'
+    }
+    if (started && words.length === 0) {
+      return 'You win!'
+    }
+    return null
+  }, [started, words.length])
+
+  if (state) {
+    return <div className="text-red-200 text-7xl w-screen h-screen flex justify-center items-center">{state}</div>
   }
   return (
-    <div>
-      {pc && <input value={message} onChange={(e) => setMessage(e.target.value)} />}
-      <button onClick={sendMessage}>send</button>
+    <Input onSubmit={onRemoveWord}>
+      {words.map((w, index) => (
+        <Word key={w.id} label={w.label} color={`rgba(255, 0, 0, ${1 / (7 - index)})`} />
+      ))}
+    </Input>
+  )
+}
+
+function Word({ label, color }) {
+  return (
+    <div className="flex justify-center h-10" style={{ backgroundColor: color }}>
+      {label}
+    </div>
+  )
+}
+
+function Input({ onSubmit, children }) {
+  const [message, setMessage] = useState('')
+  const onButton = () => {
+    onSubmit?.(message.toLowerCase())
+    setMessage('')
+  }
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <div className="flex flex-col grow">{children}</div>
+      <div className="flex gap-2">
+        <input
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          className="w-full h-24 text-black text-5xl"
+        />
+        <button onClick={onButton} className="h-24 w-24 bg-gray-300 text-black">
+          Send
+        </button>
+      </div>
     </div>
   )
 }

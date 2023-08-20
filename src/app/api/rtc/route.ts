@@ -6,6 +6,9 @@ export async function POST(request: Request) {
   const body = await request.json()
 
   const existing = connections.get(body.id) || {}
+  if (body.data?.offer) {
+    connections.delete(body.id)
+  }
   if (body.data) {
     connections.set(body.id, {
       ...existing,
