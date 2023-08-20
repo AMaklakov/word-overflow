@@ -1,27 +1,28 @@
 'use client'
 
-import { getCreatedGames, publishGame } from '@/web-socket'
+import CONFIG from '@/config'
 import _ from 'lodash'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+
+const URL = CONFIG.API_URL
 
 export default function Home() {
   const router = useRouter()
   const [id, setId] = useState('')
 
   const createGame = async () => {
-    const games = await getCreatedGames()
+    const games = await getGames()
     let gameId = getId()
     while (games.includes(gameId)) {
       gameId = getId()
     }
-    await publishGame(gameId)
     router.push(`/words-overflow/${gameId}`)
   }
 
   const joinGame = async () => {
-    const games = await getCreatedGames()
+    const games = await getGames()
     if (games.includes(id)) {
       router.push(`/words-overflow/${id}/connect`)
     } else {
@@ -71,3 +72,5 @@ function getId(length: number = 4): string {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
   return _.times(length, () => characters.charAt(Math.floor(Math.random() * characters.length))).join('')
 }
+
+const getGames = () => fetch('http://' + URL + '/games').then((r) => r.json())

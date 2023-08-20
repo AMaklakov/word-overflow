@@ -1,52 +1,42 @@
 'use client'
 
-import { useMemo, useState, useCallback, useDeferredValue, useEffect, useLayoutEffect } from 'react'
-import _ from 'lodash'
-import { useDataChannel } from '@/useDataChannel'
-import useLetterEvent from '@/useLetterEvent'
-import { IResponseMessage, IMessage } from './Message'
-import { GameOver, Stats, IStats } from './Stats'
-import { IWord, Words } from './Word'
+import { useRouter } from 'next/navigation'
 import WORDS from './words.json'
+import useLetterEvent from '@/useLetterEvent'
+import _ from 'lodash'
+import { useMemo, useState, useCallback, useDeferredValue } from 'react'
+import { IStats, GameOver, Stats } from '../Stats'
+import { IWord, Words } from '../Word'
 
 const COLORS = ['#00AC11', '#E20101', '#E36D00', '#9000E9', '#F3DB00']
-const N = 1
+const N = 20
 
-export default function GameServer({ dc, onEnd }: { dc?: RTCDataChannel; onEnd: () => void }) {
-  const [currentColor, partnerColor] = useMemo(() => _.sampleSize(COLORS, 2), [])
+export default function SingleGame() {
+  const nav = useRouter()
+  const handleEnd = () => nav.replace('/')
+
+  const color = useMemo(() => _.sample(COLORS)!, [])
   const [words, setWords] = useState<IWord[]>(() => createWords(WORDS, N))
   const isEnd = useMemo(() => _.every(words, (w) => w.text.length === w.written), [words])
 
   const handleType = useCallback((key: string, color: string) => setWords(updateWords(key, color)), [])
-  const handleKey = useCallback((key: string) => handleType(key, currentColor), [currentColor, handleType])
+  const handleKey = useCallback((key: string) => handleType(key, color), [color, handleType])
   useLetterEvent(handleKey, !isEnd)
 
   // TODO: maybe debounce?
   const deferredWords = useDeferredValue(words)
   const stats = useMemo<IStats>(
-    () => [
-      { color: currentColor, words: _.filter(deferredWords, { color: currentColor }) },
-      { color: partnerColor, words: _.filter(deferredWords, { color: partnerColor }) },
-    ],
-    [currentColor, deferredWords, partnerColor]
+    () => [{ color: color, words: _.filter(deferredWords, { color: color }) }],
+    [color, deferredWords]
   )
-
-  const handleMessage = useCallback(
-    (m: IResponseMessage) => handleType(m.key, partnerColor),
-    [handleType, partnerColor]
-  )
-  const [sendMessage] = useDataChannel<IMessage, IResponseMessage>(dc, handleMessage)
-  useEffect(() => {
-    sendMessage({ words, stats, isEnd })
-  }, [isEnd, sendMessage, stats, words])
 
   const handleRestart = useCallback(() => setWords(createWords(WORDS, N)), [])
 
   return (
     <>
       <Words words={words} />
-      {!!dc && <Stats stats={stats} />}
-      {isEnd && <GameOver stats={stats} onEnd={onEnd} onRestart={handleRestart} />}
+      <Stats stats={stats} />
+      {isEnd && <GameOver stats={stats} onEnd={handleEnd} onRestart={handleRestart} />}
     </>
   )
 }
