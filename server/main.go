@@ -11,6 +11,6 @@ const PORT = ":5123"
 
 func main() {
 	r := chi.NewRouter()
-	word_overflow.NewRouter(r, "word-overflow")
+	word_overflow.NewRouter(r, "words-overflow")
 	http.ListenAndServe(PORT, r)
 }

@@ -11,19 +11,21 @@ export interface IKeyMessage {
   data: IKeyData
 }
 
-export interface ITimerMessage {
-  type: 'timer'
-  data: number
+export interface IRestartMessage {
+  type: 'restart'
 }
 
-export type IMessage = IDataMessage | ITimerMessage | IKeyMessage
+export type IMessage = IDataMessage | IRestartMessage | IKeyMessage
 
 export interface IStateData {
   id: string
   words: IWord[]
   stats: IStats
   isEnd: boolean
-  counter: number
+  timeout: number
+  config: {
+    timeout: number
+  }
 }
 
 export type IKeyData = string

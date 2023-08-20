@@ -23,7 +23,7 @@ func CreateGame(w http.ResponseWriter, r *http.Request) {
 		gameId = getId(ID_LENGTH)
 	}
 
-	var config GameConfig
+	var config Config
 	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
 		common.WriteError(w, http.StatusBadRequest, "Request body is not valid")
 		return
@@ -107,13 +107,17 @@ func GetSocket(w http.ResponseWriter, r *http.Request) {
 		}
 
 		switch message.Type {
-		case KeyMessageType:
+		case TypeKey:
 			game.Events <- &Message{
 				Player:  player.Color,
 				Type:    TypeKey,
 				Payload: message.Data,
 			}
-
+		case TypeRestart:
+			game.Events <- &Message{
+				Player: player.Color,
+				Type:   TypeRestart,
+			}
 		default:
 			log.Println("Unsupported message type", message)
 		}
@@ -122,7 +126,7 @@ func GetSocket(w http.ResponseWriter, r *http.Request) {
 
 func ListenAndSendMessages(ch <-chan any, conn *websocket.Conn) {
 	for msg := range ch {
-		if err := conn.WriteJSON(ClientMessage{DataMessageType, msg}); err != nil {
+		if err := conn.WriteJSON(ClientMessage{TypeData, msg}); err != nil {
 			log.Println("Failed to write to conn: ", msg)
 		}
 	}
@@ -132,14 +136,6 @@ type ClientMessage struct {
 	Type string      `json:"type"`
 	Data interface{} `json:"data"`
 }
-
-const (
-	StartGameMessageType = "start"
-	KeyMessageType       = "key"
-	RestartMessageType   = "restart"
-	DataMessageType      = "data"
-	// TimerMessageType     = "timer"
-)
 
 type KeyMessage struct {
 	Key string `json:"key"`

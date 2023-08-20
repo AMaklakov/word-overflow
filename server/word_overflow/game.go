@@ -11,30 +11,37 @@ type Game struct {
 	Words   []*Word       `json:"words"`
 	Stats   []*Stat       `json:"stats"`
 	Players []*Player     `json:"players"`
-	Config  *GameConfig   `json:"-"`
+	Config  *Config       `json:"config"`
 	IsEnd   bool          `json:"isEnd"`
-	Counter int           `json:"counter"`
+	Timeout int           `json:"timeout"`
 	Events  chan *Message `json:"-"`
 }
 
-func NewGame(id string, config *GameConfig) *Game {
-	words := make([]*Word, config.Words)
-	for i, text := range common.GenerateWords(config.Words) {
-		words[i] = NewWord(text, "")
-	}
+func NewGame(id string, config *Config) *Game {
 	game := &Game{
 		Id:      id,
-		Words:   words,
+		Words:   make([]*Word, 0),
 		Stats:   make([]*Stat, 0),
 		Players: make([]*Player, 0),
 		Config:  config,
 		IsEnd:   false,
-		Counter: config.Timeout,
+		Timeout: config.Timeout,
 		Events:  make(chan *Message, 10),
 	}
-
-	go game.ProcessEvents()
+	game.init()
 	return game
+}
+
+func (g *Game) init() {
+	words := make([]*Word, g.Config.Words)
+	for i, text := range common.GenerateWords(g.Config.Words) {
+		words[i] = NewWord(text, "")
+	}
+
+	g.IsEnd = false
+	g.Timeout = g.Config.Timeout
+	g.Words = words
+	go g.ProcessEvents()
 }
 
 func (g *Game) Destroy() {
@@ -45,22 +52,24 @@ func (g *Game) Destroy() {
 }
 
 func (g *Game) ProcessEvents() {
+	defer log.Println("Ending listening")
+
 	for m := range g.Events {
-		if !g.canPlay() {
-			continue
-		}
-
-		var updated bool
-
 		switch m.Type {
 		case TypeKey:
-			updated = g.processKey(m.Payload.(string), m.Player)
+			if !g.canPlay() {
+				continue
+			}
+			if updated := g.processKey(m.Payload.(string), m.Player); updated {
+				g.NotifyPlayers()
+			}
+		case TypeRestart:
+			g.init()
+			g.NotifyPlayers()
+			go g.countDown()
+			return
 		default:
 			log.Fatal("Unsupported message type", m.Type, m)
-		}
-
-		if updated {
-			g.NotifyPlayers()
 		}
 	}
 }
@@ -104,12 +113,12 @@ func (g *Game) NotifyPlayers() {
 }
 
 func (g *Game) countDown() {
-	if g.Counter != g.Config.Timeout {
+	if g.Timeout != g.Config.Timeout {
 		return
 	}
 
 	for i := g.Config.Timeout; i > 0; i-- {
-		g.Counter--
+		g.Timeout--
 		g.NotifyPlayers()
 		time.Sleep(time.Second)
 	}
@@ -139,7 +148,7 @@ func (g *Game) processKey(key, color string) bool {
 }
 
 func (g *Game) canPlay() bool {
-	return !g.IsEnd && g.Counter == 0
+	return !g.IsEnd && g.Timeout == 0
 }
 
 var Colors = []string{

@@ -9,7 +9,7 @@ import (
 )
 
 func TestGame(t *testing.T) {
-	game := NewGame("1", &GameConfig{
+	game := NewGame("1", &Config{
 		Words:   20,
 		Players: 1,
 		Timeout: 0,
@@ -44,7 +44,7 @@ func TestGameMultiplePlayersSameWord(t *testing.T) {
 	N := 5
 	wg := sync.WaitGroup{}
 
-	game := NewGame("1", &GameConfig{Words: 20, Players: 2, Timeout: 0})
+	game := NewGame("1", &Config{Words: 20, Players: 2, Timeout: 0})
 	word := game.Words[len(game.Words)-1]
 
 	for i := 0; i < N; i++ {
@@ -77,7 +77,7 @@ func TestGameMultiplePlayersSameWord(t *testing.T) {
 }
 
 func TestTypeKey(t *testing.T) {
-	game := NewGame("1", &GameConfig{Words: 30, Players: 2, Timeout: 0})
+	game := NewGame("1", &Config{Words: 30, Players: 2, Timeout: 0})
 	game.Words[20] = &Word{"1Hello", 0, ""}
 	game.Words[15] = &Word{"0World", 0, ""}
 
@@ -97,7 +97,7 @@ func TestTypeKey(t *testing.T) {
 
 func BenchmarkTypeKey(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		game := NewGame("1", &GameConfig{Words: 30, Players: 2, Timeout: 0})
+		game := NewGame("1", &Config{Words: 30, Players: 2, Timeout: 0})
 		game.Words[20] = &Word{"1Hello", 0, ""}
 		game.Words[15] = &Word{"0World", 0, ""}
 		for _, l := range strings.Split("11H2e3l4l5o600W00o0rld", "") {
