@@ -7,23 +7,25 @@ import (
 	"net/http"
 )
 
-type ErrorBody struct {
+type ApiError struct {
 	Message string `json:"message"`
 }
 
-func sendError(w http.ResponseWriter, code int, message string) {
-	sendJSON(w, code, &ErrorBody{message})
+func WriteError(w http.ResponseWriter, code int, message string) error {
+	return WriteJSON(w, code, &ApiError{message})
 }
 
-func sendJSON(w http.ResponseWriter, code int, message any) {
-	body, err := json.Marshal(message)
+func WriteJSON(w http.ResponseWriter, code int, message any) error {
+	w.WriteHeader(code)
+	w.Header().Add("Content-Type", "application/json")
+	err := json.NewEncoder(w).Encode(message)
+
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println("Failed to send the message: ", message, " with code: ", code)
-		return
 	}
-	w.WriteHeader(code)
-	w.Write(body)
+
+	return err
 }
 
 func getId(length int) string {

@@ -24,14 +24,14 @@ func CreateGame(w http.ResponseWriter, r *http.Request) {
 
 	var config word_overflow.GameConfig
 	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
-		sendError(w, http.StatusBadRequest, "Request body is not valid")
+		WriteError(w, http.StatusBadRequest, "Request body is not valid")
 		return
 	}
 
 	game := word_overflow.NewGame(gameId, &config)
 	Games[gameId] = game
 
-	sendJSON(w, http.StatusOK, game)
+	WriteJSON(w, http.StatusOK, game)
 }
 
 func GetGame(w http.ResponseWriter, r *http.Request) {
@@ -39,16 +39,16 @@ func GetGame(w http.ResponseWriter, r *http.Request) {
 	game := Games[gameId]
 
 	if game == nil {
-		sendError(w, http.StatusNotFound, "No such game")
+		WriteError(w, http.StatusNotFound, "No such game")
 		return
 	}
 
 	if !game.CanJoin() {
-		sendError(w, http.StatusForbidden, "Max game connections reached")
+		WriteError(w, http.StatusForbidden, "Max game connections reached")
 		return
 	}
 
-	sendJSON(w, http.StatusOK, game)
+	WriteJSON(w, http.StatusOK, game)
 }
 
 func GetSocket(w http.ResponseWriter, r *http.Request) {
@@ -57,18 +57,18 @@ func GetSocket(w http.ResponseWriter, r *http.Request) {
 
 	// Create a new game if needed
 	if game == nil {
-		sendError(w, http.StatusNotFound, "No such game")
+		WriteError(w, http.StatusNotFound, "No such game")
 		return
 	}
 	// Already full, rejecting
 	if !game.CanJoin() {
-		sendError(w, http.StatusForbidden, "Max game connections reached")
+		WriteError(w, http.StatusForbidden, "Max game connections reached")
 		return
 	}
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		sendError(w, http.StatusInternalServerError, "Cannot upgrade connection to WS")
+		WriteError(w, http.StatusInternalServerError, "Cannot upgrade connection to WS")
 		return
 	}
 
@@ -97,7 +97,7 @@ func GetSocket(w http.ResponseWriter, r *http.Request) {
 		var message Message
 		err := conn.ReadJSON(&message)
 		if err != nil {
-			sendError(w, http.StatusBadRequest, "Message is not valid")
+			WriteError(w, http.StatusBadRequest, "Message is not valid")
 			log.Println("Player message is not valid: ", err)
 			return
 		}
