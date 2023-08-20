@@ -1,4 +1,4 @@
-package word_overflow
+package main
 
 type Message struct {
 	Type string      `json:"type"`

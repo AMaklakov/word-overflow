@@ -1,25 +1,13 @@
 package word_overflow
 
-import (
-	"fmt"
-
-	"github.com/gorilla/websocket"
-)
-
 type Player struct {
-	Color string
-	Conn  *websocket.Conn
+	Color string   `json:"color"`
+	Ch    chan any `json:"-"`
 }
 
-func NewPlayer(conn *websocket.Conn, color string) *Player {
+func NewPlayer(color string) *Player {
 	return &Player{
 		Color: color,
-		Conn:  conn,
-	}
-}
-
-func (p *Player) Write(message interface{}) {
-	if err := p.Conn.WriteJSON(message); err != nil {
-		fmt.Printf("write to client error: %v\n", err)
+		Ch:    make(chan any, 10),
 	}
 }

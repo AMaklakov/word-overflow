@@ -3,11 +3,11 @@ package main
 import (
 	"AMaklakov/word-overflow/word_overflow"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/gorilla/websocket"
 )
 
 const (
@@ -36,9 +36,15 @@ func CreateGame(w http.ResponseWriter, r *http.Request) {
 
 func GetGame(w http.ResponseWriter, r *http.Request) {
 	gameId := chi.URLParam(r, "id")
-	game, ok := Games[gameId]
-	if !ok || !game.CanJoin() {
+	game := Games[gameId]
+
+	if game == nil {
 		sendError(w, http.StatusNotFound, "No such game")
+		return
+	}
+
+	if !game.CanJoin() {
+		sendError(w, http.StatusForbidden, "Max game connections reached")
 		return
 	}
 
@@ -47,14 +53,13 @@ func GetGame(w http.ResponseWriter, r *http.Request) {
 
 func GetSocket(w http.ResponseWriter, r *http.Request) {
 	gameId := chi.URLParam(r, "id")
-	game, ok := Games[gameId]
+	game := Games[gameId]
 
 	// Create a new game if needed
-	if !ok {
+	if game == nil {
 		sendError(w, http.StatusNotFound, "No such game")
 		return
 	}
-
 	// Already full, rejecting
 	if !game.CanJoin() {
 		sendError(w, http.StatusForbidden, "Max game connections reached")
@@ -67,49 +72,50 @@ func GetSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	player := game.AddPlayer(conn)
+	player := game.AddPlayer()
+	go ListenAndSendMessages(player.Ch, conn)
 
 	defer func() {
 		err := conn.Close()
 		if err != nil {
-			fmt.Printf("err closing connection: %v\n", err)
+			log.Printf("err closing connection: %v\n", err)
 		}
 
-		ok := game.DeletePlayer(player.Color)
-		if ok {
-			game.UpdateStats()
-			game.WriteToAll(word_overflow.Message{word_overflow.DataMessageType, game})
-		} else {
+		hasPlayers := game.DeletePlayer(player.Color)
+		if !hasPlayers {
 			log.Println("Deleting game ", gameId)
 			delete(Games, gameId)
 		}
 	}()
 
-	// If the last required to connect
-	if game.Config.Players == len(game.Players) {
+	// If the last required connection
+	if !game.CanJoin() {
 		go game.CountDown()
 	}
 
 	for {
-		var message word_overflow.Message
+		var message Message
 		err := conn.ReadJSON(&message)
 		if err != nil {
 			sendError(w, http.StatusBadRequest, "Message is not valid")
+			log.Println("Player message is not valid: ", err)
 			return
 		}
 
-		// fmt.Printf("message: %v\n", message)
-
 		switch message.Type {
-		case word_overflow.KeyMessageType:
-			if game.CanPlay() {
-				game.ProcessKey(message.Data.(string), player.Color)
-				game.UpdateStats()
-				game.WriteToAll(word_overflow.Message{word_overflow.DataMessageType, game})
-			}
+		case KeyMessageType:
+			game.ProcessKey(message.Data.(string), player.Color)
 
 		default:
 			log.Println("Unsupported message type", message)
+		}
+	}
+}
+
+func ListenAndSendMessages(ch <-chan any, conn *websocket.Conn) {
+	for msg := range ch {
+		if err := conn.WriteJSON(Message{DataMessageType, msg}); err != nil {
+			log.Println("Failed to write to conn: ", msg)
 		}
 	}
 }
