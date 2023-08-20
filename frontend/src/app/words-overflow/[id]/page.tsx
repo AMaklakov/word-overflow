@@ -5,10 +5,11 @@ import Game from '../GameServer'
 import { useRouter } from 'next/navigation'
 import { useMemo } from 'react'
 import { useObservableState } from 'observable-hooks'
-import { IDataMessage, IMessage, IStateData } from '../Message'
+import { IDataMessage, IMessage } from '../Message'
 import { webSocket } from 'rxjs/webSocket'
 import CONFIG from '@/config'
 import { filter, map } from 'rxjs/operators'
+import Link from 'next/link'
 
 const API = CONFIG.API_URL
 
@@ -49,4 +50,9 @@ export default function OnlineSever({ params }: any) {
       />
     )
   }
+  return (
+    <p>
+      The game was not created. Please return back to the <Link href="/">Home page</Link> and create a new game
+    </p>
+  )
 }

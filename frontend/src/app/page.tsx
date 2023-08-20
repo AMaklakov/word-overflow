@@ -17,6 +17,7 @@ const WORDS_SELECT = {
 } as const
 
 const PLAYERS = {
+  '1': 1,
   '2': 2,
   '3': 3,
   '4': 4,
@@ -63,10 +64,6 @@ export default function Home() {
   return (
     <div className="flex flex-col justify-center">
       <div className="flex justify-between">
-        <div>
-          <h2>Single player</h2>
-          <Link href="/words-overflow/single">Play alone</Link>
-        </div>
         <div className="flex flex-col gap-2">
           <h2>Create a game</h2>
 
