@@ -1,23 +1,16 @@
 import { useCallback, useEffect, useRef } from 'react'
 
-export const useDataChannel = (dc: RTCDataChannel, onMessage?: (event: MessageEvent<any>) => void) => {
+export const useDataChannel = (dc: RTCDataChannel, onMessage: (event: MessageEvent<any>) => void) => {
   let sendQueue = useRef<string[]>([])
 
-  useEffect(() => {
-    console.log('here')
-    let isActive = true
-    dc.onmessage = (event) => isActive && onMessage?.(event)
-    return () => {
-      isActive = false
-    }
-  }, [dc, onMessage])
-
   const sendMessage = useCallback(
-    (msg: string) => {
-      sendQueue.current.push(msg)
+    (msg?: string) => {
+      if (msg != null) {
+        sendQueue.current.push(msg)
+      }
 
       if (dc.readyState !== 'open') {
-        console.log(`Connection not open; Status: ${dc.readyState} queueing message`)
+        // console.log(`Connection not open; Status: ${dc.readyState} queueing message`)
         return
       }
 
@@ -26,6 +19,16 @@ export const useDataChannel = (dc: RTCDataChannel, onMessage?: (event: MessageEv
     },
     [dc]
   )
+
+  useEffect(() => {
+    const onOpen = () => sendMessage()
+    dc.addEventListener('message', onMessage)
+    dc.addEventListener('open', onOpen)
+    return () => {
+      dc.removeEventListener('message', onMessage)
+      dc.addEventListener('open', onOpen)
+    }
+  }, [dc, onMessage, sendMessage])
 
   return [sendMessage]
 }
