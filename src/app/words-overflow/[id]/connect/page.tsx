@@ -5,7 +5,7 @@ import { IWord, Words } from '@/app/words-overflow/Word 1'
 import { useRTC } from '@/useRtc'
 import _ from 'lodash'
 import { useDataChannel } from '@/useDataChannel'
-import Stats, { IStats } from '@/app/words-overflow/Stats'
+import GameOver, { IStats } from '@/app/words-overflow/Stats'
 import { IMessage, IResponseMessage } from '@/app/words-overflow/Message'
 import useLetterEvent from '@/useLetterEvent'
 
@@ -31,7 +31,7 @@ function Sub({ dc }: { dc: RTCDataChannel }) {
   return (
     <>
       <Words words={words} />
-      <Stats stats={stats} />
+      <GameOver stats={stats} />
     </>
   )
 }

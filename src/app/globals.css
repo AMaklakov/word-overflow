@@ -20,3 +20,18 @@ body {
   color: rgb(var(--foreground-rgb));
   background: rgb(var(--background-start-rgb));
 }
+
+.fall-down {
+  animation: fallDown 1s ease;
+  -webkit-animation: fallDown 1s ease 1;
+}
+
+@keyframes fallDown {
+  0% {
+    transform: translateY(0)
+  }
+
+  100% {
+    transform: translateY(100%);
+  }
+}

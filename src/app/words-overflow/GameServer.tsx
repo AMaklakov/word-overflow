@@ -5,7 +5,7 @@ import _ from 'lodash'
 import { useDataChannel } from '@/useDataChannel'
 import useLetterEvent from '@/useLetterEvent'
 import { IResponseMessage, IMessage } from './Message'
-import Stats, { IStats } from './Stats'
+import { GameOver, Stats, IStats } from './Stats'
 import { IWord, Words } from './Word'
 import WORDS from './words.json'
 
@@ -13,35 +13,21 @@ const COLORS = ['#00AC11', '#E20101', '#E36D00', '#9000E9', '#F3DB00']
 
 export default function GameServer({ dc }: { dc?: RTCDataChannel }) {
   const [currentColor, partnerColor] = useMemo(() => _.sampleSize(COLORS, 2), [])
-  const [words, setWords] = useState<IWord[]>(() => createWords(WORDS, 10))
-  const [stats, setStats] = useState<IStats | null>(null)
-
-  const [width, setWidth] = useState(0)
-  const [height, setHeight] = useState(0)
-  useLayoutEffect(() => {
-    const f = () => {
-      setWidth(window.innerWidth)
-      setHeight(window.innerHeight - document.querySelector('header')!.clientHeight - 10)
-    }
-    f()
-    window.addEventListener('resize', f)
-    return () => window.removeEventListener('resize', f)
-  }, [])
+  const [words, setWords] = useState<IWord[]>(() => createWords(WORDS, 30))
+  const [isEnd, setIsEnd] = useState(false)
 
   const handleType = useCallback((key: string, color: string) => setWords(updateWords(key, color)), [])
   const handleKey = useCallback((key: string) => handleType(key, currentColor), [currentColor, handleType])
-  useLetterEvent(handleKey, !stats)
+  useLetterEvent(handleKey, !isEnd)
 
   const deferredWords = useDeferredValue(words)
-  useEffect(() => {
-    if (deferredWords.every((w) => w.text.length === w.written)) {
-      const stats = [
-        { color: currentColor, words: _.filter(deferredWords, { color: currentColor }) },
-        { color: partnerColor, words: _.filter(deferredWords, { color: partnerColor }) },
-      ]
-      setStats(stats)
-    }
-  }, [currentColor, deferredWords, partnerColor])
+  const stats = useMemo<IStats>(
+    () => [
+      { color: currentColor, words: _.filter(deferredWords, { color: currentColor }) },
+      { color: partnerColor, words: _.filter(deferredWords, { color: partnerColor }) },
+    ],
+    [currentColor, deferredWords, partnerColor]
+  )
 
   const handleMessage = useCallback(
     (m: IResponseMessage) => handleType(m.key, partnerColor),
@@ -53,15 +39,11 @@ export default function GameServer({ dc }: { dc?: RTCDataChannel }) {
   }, [sendMessage, stats, words])
 
   return (
-    <div
-      style={{
-        width,
-        height,
-      }}
-    >
+    <>
       <Words words={words} />
       <Stats stats={stats} />
-    </div>
+      {/* <GameOver stats={stats} /> */}
+    </>
   )
 }
 

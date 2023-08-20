@@ -1,4 +1,4 @@
-import { IWord } from './Word 1'
+import { IWord } from './Word'
 
 interface Stat {
   color: string
@@ -6,7 +6,7 @@ interface Stat {
 }
 export type IStats = Stat[]
 
-export default function Stats({ stats }: { stats?: IStats | null }) {
+export function GameOver({ stats }: { stats?: IStats | null }) {
   if (!stats) {
     return null
   }
@@ -23,6 +23,18 @@ export default function Stats({ stats }: { stats?: IStats | null }) {
         </div>
       ))}
       <h3 className="text-white">Refresh the page to restart</h3>
+    </div>
+  )
+}
+
+export const Stats = ({ stats }: { stats: IStats }) => {
+  return (
+    <div className="absolute left-0 right-0 bottom-5 flex justify-between text-3xl px-5 font-mono">
+      {stats.map((s) => (
+        <span key={s.color} style={{ color: s.color }}>
+          {s.words.length}
+        </span>
+      ))}
     </div>
   )
 }
