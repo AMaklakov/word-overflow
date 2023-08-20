@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef } from 'react'
 
-export const useDataChannel = <S, R>(dc: RTCDataChannel, onMessage: (data: R) => void) => {
-  let sendQueue = useRef<string[]>([])
+export const useDataChannel = <S, R>(dc?: RTCDataChannel, onMessage?: (data: R) => void) => {
+  const sendQueue = useRef<string[]>([])
 
   const sendMessage = useCallback(
     (msg?: S) => {
+      if (!dc) return
+
       if (msg != null) {
         sendQueue.current.push(JSON.stringify(msg))
       }
@@ -21,11 +23,11 @@ export const useDataChannel = <S, R>(dc: RTCDataChannel, onMessage: (data: R) =>
   useEffect(() => {
     const handleMessage = (message: MessageEvent<string>) => onMessage?.(JSON.parse(message.data))
     const handleOpen = () => sendMessage()
-    dc.addEventListener('message', handleMessage)
-    dc.addEventListener('open', handleOpen)
+    dc?.addEventListener('message', handleMessage)
+    dc?.addEventListener('open', handleOpen)
     return () => {
-      dc.removeEventListener('message', handleMessage)
-      dc.addEventListener('open', handleOpen)
+      dc?.removeEventListener('message', handleMessage)
+      dc?.addEventListener('open', handleOpen)
     }
   }, [dc, onMessage, sendMessage])
 

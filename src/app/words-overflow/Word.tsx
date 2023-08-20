@@ -12,7 +12,7 @@ import {
   Stats,
   useHelper,
 } from '@react-three/drei'
-import _, { takeRight } from 'lodash'
+import _ from 'lodash'
 import { lerp } from 'three/src/math/MathUtils.js'
 import { Debug, Physics, useBox, usePlane } from '@react-three/cannon'
 import { DirectionalLightHelper, PointLightHelper, SpotLightHelper } from 'three'
@@ -61,21 +61,10 @@ const getPositions = (words: IWord[], n = 3) => {
   return [ppp, left, right, top, bottom]
 }
 
-export const Words = ({ words, width, height }) => {
+export const Words = ({ words }: { words: IWord[]}) => {
   const [positions, left, right, top, bottom] = useMemo(() => getPositions(words, 5), [words])
-  const camera = useMemo(
-    () => ({
-      position: [0, 0, 150] as const,
-      // left: _.min(_.map(positions, 'position.0')) + 100,
-      // right: _.max(_.map(positions, 'position.0')) - 100,
-      // top: _.min(_.map(positions, 'position.1')) + 100,
-      // bottom: _.max(_.map(positions, 'position.1')) - 100,
-    }),
-    []
-  )
-
   return (
-    <Canvas camera={camera} shadows dpr={[1, 2]}>
+    <Canvas camera={{ position: [0, 0, 150] }} shadows dpr={[1, 2]}>
       <Stats showPanel={0} className="stats" />
       <PresentationControls
         config={{ mass: 2, tension: 500 }}

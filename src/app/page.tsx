@@ -2,6 +2,7 @@
 
 import { getCreatedGames, publishGame } from '@/web-socket'
 import _ from 'lodash'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
@@ -31,6 +32,10 @@ export default function Home() {
   return (
     <div className="flex flex-col justify-center">
       <div className="flex justify-between">
+        <div>
+          <h2>Single player</h2>
+          <Link href="/words-overflow/single">Play alone</Link>
+        </div>
         <div>
           <h2>Create a game</h2>
           <button onClick={createGame}>Create</button>
