@@ -1,6 +1,7 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import Link from 'next/link'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -17,6 +18,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           inter.className + ' prose dark:prose-invert !max-w-[100%] px-4 sm:px-10 md:px-28 pt-2 relative min-h-screen'
         }
       >
+        <header className="flex sticky justify-between mb-5">
+          <nav>
+            <Link href="/">
+              <span className="text-3xl text-center">Word-overflow</span>
+            </Link>
+          </nav>
+        </header>
         {children}
       </body>
     </html>

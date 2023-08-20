@@ -12,7 +12,16 @@ const COLORS = ['#00AC11', '#E20101', '#E36D00', '#9000E9', '#F3DB00']
 
 export default function CreateGame({ params }: any) {
   const dc = useRTC(params.id, 'create')
-  return dc ? <Creator dc={dc} /> : <div>Waiting to connect...</div>
+  return dc ? (
+    <Creator dc={dc} />
+  ) : (
+    <div>
+      <h2>Waiting for a friend to connect...</h2>
+      <p>
+        Send this code to your friend: <span className="text-5xl font-bold">{params.id}</span>
+      </p>
+    </div>
+  )
 }
 
 function Creator({ dc }: { dc: RTCDataChannel }) {

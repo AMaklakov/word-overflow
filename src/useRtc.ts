@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useObservableState } from 'observable-hooks'
 import { BehaviorSubject } from 'rxjs'
-import { createSocket as createStream } from './web-socket'
+import { getSocketChannel as createStream } from './web-socket'
 import { Types } from 'ably'
 
 enum Messages {
