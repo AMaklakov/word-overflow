@@ -17,7 +17,7 @@ export default function CreateGame({ params }: any) {
 
 function Creator({ dc }: { dc: RTCDataChannel }) {
   const [currentColor, partnerColor] = useMemo(() => _.sampleSize(COLORS, 2), [])
-  const [words, setWords] = useState<IWord[]>(() => createWords(WORDS))
+  const [words, setWords] = useState<IWord[]>(() => createWords(WORDS, 5))
   const [stats, setStats] = useState<any>(null)
 
   const handleType = useCallback((letter: string, color: string) => setWords(updateWords(letter, color)), [])
@@ -43,14 +43,8 @@ function Creator({ dc }: { dc: RTCDataChannel }) {
   useEffect(() => {
     if (deferredWords.every((w) => w.text.length === w.written)) {
       const stats = [
-        {
-          color: currentColor,
-          words: deferredWords.filter((w) => w.color === currentColor),
-        },
-        {
-          color: currentColor,
-          words: deferredWords.filter((w) => w.color === partnerColor),
-        },
+        { color: currentColor, words: _.filter(deferredWords, { color: currentColor }) },
+        { color: partnerColor, words: _.filter(deferredWords, { color: partnerColor }) },
       ]
       setStats(stats)
       sendMessage(JSON.stringify(stats))

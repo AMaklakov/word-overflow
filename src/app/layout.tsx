@@ -12,7 +12,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={inter.className + ' prose dark:prose-invert !max-w-[100%] px-4 sm:px-10 md:px-28 pt-2'}>
+      <body
+        className={
+          inter.className + ' prose dark:prose-invert !max-w-[100%] px-4 sm:px-10 md:px-28 pt-2 relative min-h-screen'
+        }
+      >
         {children}
       </body>
     </html>
