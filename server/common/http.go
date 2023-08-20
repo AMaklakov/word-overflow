@@ -11,6 +11,7 @@ type ApiError struct {
 }
 
 func WriteError(w http.ResponseWriter, code int, message string) error {
+	log.Println("Api error", code, message)
 	return WriteJSON(w, code, &ApiError{message})
 }
 
