@@ -1,17 +1,19 @@
 package word_overflow
 
 import (
+	"log"
 	"time"
 )
 
 type Game struct {
-	Id      string      `json:"id"`
-	Words   []*Word     `json:"words"`
-	Stats   []*Stat     `json:"stats"`
-	Players []*Player   `json:"players"`
-	Config  *GameConfig `json:"-"`
-	IsEnd   bool        `json:"isEnd"`
-	Counter int         `json:"counter"`
+	Id      string        `json:"id"`
+	Words   []*Word       `json:"words"`
+	Stats   []*Stat       `json:"stats"`
+	Players []*Player     `json:"players"`
+	Config  *GameConfig   `json:"-"`
+	IsEnd   bool          `json:"isEnd"`
+	Counter int           `json:"counter"`
+	Events  chan *Message `json:"-"`
 }
 
 func NewGame(id string, config *GameConfig) *Game {
@@ -19,7 +21,7 @@ func NewGame(id string, config *GameConfig) *Game {
 	for _, text := range GenerateWords(config.Words) {
 		words = append(words, NewWord(text, ""))
 	}
-	return &Game{
+	game := &Game{
 		Id:      id,
 		Words:   words,
 		Stats:   make([]*Stat, 0),
@@ -27,6 +29,38 @@ func NewGame(id string, config *GameConfig) *Game {
 		Config:  config,
 		IsEnd:   false,
 		Counter: config.Timeout,
+		Events:  make(chan *Message, 10),
+	}
+
+	go game.ProcessEvents()
+	return game
+}
+
+func (g *Game) Destroy() {
+	close(g.Events)
+	for _, p := range g.Players {
+		close(p.Ch)
+	}
+}
+
+func (g *Game) ProcessEvents() {
+	for m := range g.Events {
+		if !g.canPlay() {
+			continue
+		}
+
+		var updated bool
+
+		switch m.Type {
+		case TypeKey:
+			updated = g.processKey(m.Payload.(string), m.Player)
+		default:
+			log.Fatal("Unsupported message type", m.Type, m)
+		}
+
+		if updated {
+			g.NotifyPlayers()
+		}
 	}
 }
 
@@ -34,25 +68,16 @@ func (g *Game) CanJoin() bool {
 	return len(g.Players) < g.Config.Players
 }
 
-func (g *Game) CanPlay() bool {
-	return !g.IsEnd && g.Counter == 0
-}
-
-func (g *Game) ProcessKey(key, color string) {
-	if !g.CanPlay() {
-		return
-	}
-
-	updated := g.processKey(key, color)
-	if updated {
-		g.NotifyPlayers()
-	}
-}
-
 func (g *Game) AddPlayer() *Player {
 	player := NewPlayer(generateColor(g.Players))
 	g.Players = append(g.Players, player)
 	g.NotifyPlayers()
+
+	// If the last required connection, start the game
+	if !g.CanJoin() {
+		go g.countDown()
+	}
+
 	return player
 }
 
@@ -77,7 +102,7 @@ func (g *Game) NotifyPlayers() {
 	}
 }
 
-func (g *Game) CountDown() {
+func (g *Game) countDown() {
 	if g.Counter != g.Config.Timeout {
 		return
 	}
@@ -110,6 +135,10 @@ func (g *Game) processKey(key, color string) bool {
 	}
 	// Nothing is updated
 	return false
+}
+
+func (g *Game) canPlay() bool {
+	return !g.IsEnd && g.Counter == 0
 }
 
 var Colors = []string{

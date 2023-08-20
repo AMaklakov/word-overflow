@@ -84,27 +84,26 @@ func GetSocket(w http.ResponseWriter, r *http.Request) {
 		hasPlayers := game.DeletePlayer(player.Color)
 		if !hasPlayers {
 			log.Println("Deleting game ", gameId)
+			game.Destroy()
 			delete(Games, gameId)
 		}
 	}()
-
-	// If the last required connection
-	if !game.CanJoin() {
-		go game.CountDown()
-	}
 
 	for {
 		var message Message
 		err := conn.ReadJSON(&message)
 		if err != nil {
-			WriteError(w, http.StatusBadRequest, "Message is not valid")
-			log.Println("Player message is not valid: ", err)
+			log.Println("Player message is not valid, closing connection ", err)
 			return
 		}
 
 		switch message.Type {
 		case KeyMessageType:
-			game.ProcessKey(message.Data.(string), player.Color)
+			game.Events <- &word_overflow.Message{
+				Player:  player.Color,
+				Type:    word_overflow.TypeKey,
+				Payload: message.Data,
+			}
 
 		default:
 			log.Println("Unsupported message type", message)
