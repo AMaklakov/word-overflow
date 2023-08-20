@@ -11,6 +11,9 @@ build: install
 start: build
 	./.bin/words-overflow
 
+test: install
+	go test ./...
+
 bench:
 	rm -rf old.txt
 	rm -rf new.txt

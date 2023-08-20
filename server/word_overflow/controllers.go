@@ -82,21 +82,30 @@ func GetSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	player := game.AddPlayer()
-	go ListenAndSendMessages(player.Ch, conn)
+	go func() {
+		for msg := range player.Ch {
+			if err := conn.WriteJSON(msg); err != nil {
+				log.Println("Failed to write to conn: ", msg)
+			}
+		}
+	}()
 
 	defer func() {
 		err := conn.Close()
 		if err != nil {
 			log.Printf("err closing connection: %v\n", err)
 		}
-
-		hasPlayers := game.DeletePlayer(player.Color)
-		if !hasPlayers {
+		if hasPlayers := game.DeletePlayer(player.Color); !hasPlayers {
 			log.Println("Deleting game ", gameId)
 			game.Destroy()
 			delete(Games, gameId)
 		}
 	}()
+
+	// If the last required connection, start the game
+	if !game.CanJoin() {
+		go game.Start()
+	}
 
 	for {
 		var message ClientMessage
@@ -106,15 +115,16 @@ func GetSocket(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		// TODO: can we make it better?
 		switch message.Type {
 		case ClientTypeKey:
-			game.EventsCh <- &Message{
+			game.EventsCh <- &GameMessage{
 				Player:  player.Color,
 				Type:    ClientTypeKey,
 				Payload: message.Data,
 			}
 		case ClientTypeRestart:
-			game.EventsCh <- &Message{
+			game.EventsCh <- &GameMessage{
 				Player: player.Color,
 				Type:   ClientTypeRestart,
 			}
@@ -122,23 +132,6 @@ func GetSocket(w http.ResponseWriter, r *http.Request) {
 			log.Println("Unsupported message type", message)
 		}
 	}
-}
-
-func ListenAndSendMessages(ch <-chan *ClientMessage, conn *websocket.Conn) {
-	for msg := range ch {
-		if err := conn.WriteJSON(msg); err != nil {
-			log.Println("Failed to write to conn: ", msg)
-		}
-	}
-}
-
-type ClientMessage struct {
-	Type string `json:"type"`
-	Data any    `json:"data"`
-}
-
-type KeyMessage struct {
-	Key string `json:"key"`
 }
 
 func getId(length int) string {

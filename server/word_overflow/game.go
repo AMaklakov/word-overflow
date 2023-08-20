@@ -10,14 +10,14 @@ import (
 )
 
 type Game struct {
-	Id       string        `json:"id"`
-	Words    []*Word       `json:"words"`
-	Stats    []*Stat       `json:"stats"`
-	Players  []*Player     `json:"players"`
-	Config   *Config       `json:"config"`
-	IsEnd    bool          `json:"isEnd"`
-	Timeout  int           `json:"timeout"`
-	EventsCh chan *Message `json:"-"`
+	Id       string            `json:"id"`
+	Words    []*Word           `json:"words"`
+	Stats    []*Stat           `json:"stats"`
+	Players  []*Player         `json:"players"`
+	Config   *Config           `json:"config"`
+	IsEnd    bool              `json:"isEnd"`
+	Timeout  int               `json:"timeout"`
+	EventsCh chan *GameMessage `json:"-"`
 }
 
 func NewGame(id string, config *Config) *Game {
@@ -29,7 +29,7 @@ func NewGame(id string, config *Config) *Game {
 		Config:   config,
 		IsEnd:    false,
 		Timeout:  config.Timeout,
-		EventsCh: make(chan *Message, 10),
+		EventsCh: make(chan *GameMessage, 10),
 	}
 	game.init()
 	return game
@@ -44,6 +44,7 @@ func (g *Game) init() {
 	g.IsEnd = false
 	g.Timeout = g.Config.Timeout
 	g.Words = words
+
 	go g.ProcessEvents()
 }
 
@@ -77,7 +78,7 @@ func (g *Game) ProcessEvents() {
 		case ClientTypeRestart:
 			g.init()
 			g.NotifyPlayers()
-			go g.countDown()
+			go g.Start()
 			return
 
 		default:
@@ -94,12 +95,6 @@ func (g *Game) AddPlayer() *Player {
 	player := NewPlayer(generateColor(g.Players))
 	g.Players = append(g.Players, player)
 	g.NotifyPlayers()
-
-	// If the last required connection, start the game
-	if !g.CanJoin() {
-		go g.countDown()
-	}
-
 	return player
 }
 
@@ -132,7 +127,8 @@ func (g *Game) NotifyPlayers() {
 	}
 }
 
-func (g *Game) countDown() {
+// TODO: send game timeout as a separate message
+func (g *Game) Start() {
 	if g.Timeout != g.Config.Timeout {
 		return
 	}
@@ -190,5 +186,6 @@ colorsLoop:
 		return color
 	}
 
-	panic("Color limit exceeded")
+	log.Panic("Color limit exceeded")
+	return ""
 }

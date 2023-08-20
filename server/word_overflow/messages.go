@@ -7,7 +7,12 @@ const (
 	ClientTypeCpm     = "cpm"
 )
 
-type Message struct {
+type ClientMessage struct {
+	Type string `json:"type"`
+	Data any    `json:"data"`
+}
+
+type GameMessage struct {
 	Player  string
 	Type    string
 	Payload any
