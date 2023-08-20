@@ -24,9 +24,5 @@ function Sub({ dc }: { dc: RTCDataChannel }) {
     }
   }, [sendMessage])
 
-  return (
-    <div className="w-screen px-28">
-      <Words words={words} />
-    </div>
-  )
+  return <Words words={words} />
 }
