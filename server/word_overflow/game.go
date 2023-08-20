@@ -5,6 +5,8 @@ import (
 	"AMaklakov/word-overflow/common"
 	"log"
 	"time"
+
+	"golang.org/x/exp/slices"
 )
 
 type Game struct {
@@ -110,17 +112,16 @@ func (g *Game) findPlayer(color string) *Player {
 	return nil
 }
 
+// Used slices because now I'm 😎
 func (g *Game) DeletePlayer(color string) (ok bool) {
-	players := make([]*Player, 0, len(g.Players)-1)
-	for _, p := range g.Players {
-		if p.Color == color {
-			close(p.Ch)
-		} else {
-			players = append(players, p)
-		}
+	i := slices.IndexFunc(g.Players, func(p *Player) bool {
+		return p.Color == color
+	})
+	if i >= 0 {
+		close(g.Players[i].Ch)
+		g.Players = slices.Delete(g.Players, i, i+1)
+		g.NotifyPlayers()
 	}
-	g.Players = players
-	g.NotifyPlayers()
 	return len(g.Players) > 0
 }
 
