@@ -16,13 +16,13 @@ export default function Home() {
       gameId = getId()
     }
     await publishGame(gameId)
-    router.push(`/${gameId}`)
+    router.push(`/words-overflow/${gameId}`)
   }
 
   const joinGame = async () => {
     const games = await getCreatedGames()
     if (games.includes(id)) {
-      router.push(`/connect/${id}`)
+      router.push(`/words-overflow/${id}/connect`)
     } else {
       alert('No such game found')
     }
@@ -43,6 +43,20 @@ export default function Home() {
           </button>
         </div>
       </div>
+      {/* <hr />
+      <div className="flex justify-between">
+        <div>
+          <h2>Create a game</h2>
+          <button onClick={createGame}>Create</button>
+        </div>
+        <div>
+          <h2>Connect to a game</h2>
+          <input value={id} onChange={(e) => setId(e.target.value)} />
+          <button onClick={joinGame} disabled={id.length !== 4}>
+            Join a game
+          </button>
+        </div>
+      </div> */}
     </div>
   )
 }

@@ -8,6 +8,7 @@ import { useDataChannel } from '@/useDataChannel'
 import Stats from '@/app/Stats'
 
 export default function ConnectGame({ params }: any) {
+  console.log(params)
   const dc = useRTC(params.id, 'connect')
   return dc ? <Sub dc={dc} /> : <div>Connecting to the game...</div>
 }
