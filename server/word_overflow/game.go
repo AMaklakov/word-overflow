@@ -53,7 +53,8 @@ func (g *Game) Destroy() {
 }
 
 func (g *Game) ProcessEvents() {
-	defer log.Println("Ending listening")
+	log.Println("Starting listening for events in", g.Id)
+	defer log.Println("Ending listening for events in", g.Id)
 
 	for m := range g.EventsCh {
 		switch m.Type {
@@ -76,6 +77,7 @@ func (g *Game) ProcessEvents() {
 			g.NotifyPlayers()
 			go g.countDown()
 			return
+
 		default:
 			log.Fatal("Unsupported message type", m.Type, m)
 		}
