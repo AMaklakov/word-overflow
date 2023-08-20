@@ -33,7 +33,3 @@ func (w *Word) getNextKey() string {
 	}
 	return string(w.Text[w.Written])
 }
-
-// func (w *Word) TryKey(key string) {
-
-// }

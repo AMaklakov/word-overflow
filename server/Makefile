@@ -10,3 +10,12 @@ build: install
 
 start: build
 	./.bin/words-overflow
+
+bench:
+	rm -rf old.txt
+	rm -rf new.txt
+	@git stash push $(git diff --name-only HEAD | grep -v test)
+	go test -run=NONE -bench=. ./... -count=6 > old.txt
+	@git stash pop
+	go test -run=NONE -bench=. ./... -count=6 > new.txt
+	benchstat old.txt new.txt

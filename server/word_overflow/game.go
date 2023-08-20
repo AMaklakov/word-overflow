@@ -17,9 +17,9 @@ type Game struct {
 }
 
 func NewGame(id string, config *GameConfig) *Game {
-	words := make([]*Word, 0, config.Words)
-	for _, text := range GenerateWords(config.Words) {
-		words = append(words, NewWord(text, ""))
+	words := make([]*Word, config.Words)
+	for i, text := range GenerateWords(config.Words) {
+		words[i] = NewWord(text, "")
 	}
 	game := &Game{
 		Id:      id,

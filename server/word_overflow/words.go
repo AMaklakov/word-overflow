@@ -10,10 +10,10 @@ import (
 func GenerateWords(n int) []string {
 	words := make([]string, 0, n)
 	checks := make(map[string]bool)
+	eng := cases.Title(language.English)
 	for len(words) < n {
 		lower := Words[rand.Intn(len(Words))]
-		upper := cases.Title(language.English).String(lower)
-
+		upper := eng.String(lower)
 		if checks[lower] || checks[upper] {
 			continue
 		}
@@ -34,32 +34,6 @@ func GenerateWords(n int) []string {
 	}
 	return words
 }
-
-// const words: IWord[] = []
-//   const set = new Set()
-//   while (words.length < n) {
-//     const word = _.sample(wordsS)!.toLowerCase()
-
-//     const hasWord = set.has(word) || set.has(_.capitalize(word))
-//     if (hasWord) {
-//       continue
-//     }
-
-//     const hasLower = set.has(word[0])
-//     if (!hasLower) {
-//       set.add(word[0])
-//       words.push({ text: word, written: 0 })
-//       continue
-//     }
-
-//     const hasUpper = set.has(word[0].toUpperCase())
-//     if (!hasUpper) {
-//       set.add(word[0].toUpperCase())
-//       words.push({ text: _.capitalize(word), written: 0 })
-//       continue
-//     }
-//   }
-//   return words
 
 var Words = []string{
 	"word",
