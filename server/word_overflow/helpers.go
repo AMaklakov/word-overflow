@@ -1,4 +1,4 @@
-package main
+package word_overflow
 
 import (
 	"encoding/json"

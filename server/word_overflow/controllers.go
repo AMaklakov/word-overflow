@@ -1,7 +1,6 @@
-package main
+package word_overflow
 
 import (
-	"AMaklakov/word-overflow/word_overflow"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -14,7 +13,7 @@ const (
 	ID_LENGTH = 4
 )
 
-var Games = make(map[string]*word_overflow.Game, 0)
+var Games = make(map[string]*Game, 0)
 
 func CreateGame(w http.ResponseWriter, r *http.Request) {
 	gameId := getId(ID_LENGTH)
@@ -22,13 +21,13 @@ func CreateGame(w http.ResponseWriter, r *http.Request) {
 		gameId = getId(ID_LENGTH)
 	}
 
-	var config word_overflow.GameConfig
+	var config GameConfig
 	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
 		WriteError(w, http.StatusBadRequest, "Request body is not valid")
 		return
 	}
 
-	game := word_overflow.NewGame(gameId, &config)
+	game := NewGame(gameId, &config)
 	Games[gameId] = game
 
 	WriteJSON(w, http.StatusOK, game)
@@ -49,6 +48,14 @@ func GetGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	WriteJSON(w, http.StatusOK, game)
+}
+
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  0,
+	WriteBufferSize: 0,
+	CheckOrigin: func(r *http.Request) bool {
+		return true // Пропускаем любой запрос
+	},
 }
 
 func GetSocket(w http.ResponseWriter, r *http.Request) {
@@ -90,7 +97,7 @@ func GetSocket(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	for {
-		var message Message
+		var message ClientMessage
 		err := conn.ReadJSON(&message)
 		if err != nil {
 			log.Println("Player message is not valid, closing connection ", err)
@@ -99,9 +106,9 @@ func GetSocket(w http.ResponseWriter, r *http.Request) {
 
 		switch message.Type {
 		case KeyMessageType:
-			game.Events <- &word_overflow.Message{
+			game.Events <- &Message{
 				Player:  player.Color,
-				Type:    word_overflow.TypeKey,
+				Type:    TypeKey,
 				Payload: message.Data,
 			}
 
@@ -113,8 +120,25 @@ func GetSocket(w http.ResponseWriter, r *http.Request) {
 
 func ListenAndSendMessages(ch <-chan any, conn *websocket.Conn) {
 	for msg := range ch {
-		if err := conn.WriteJSON(Message{DataMessageType, msg}); err != nil {
+		if err := conn.WriteJSON(ClientMessage{DataMessageType, msg}); err != nil {
 			log.Println("Failed to write to conn: ", msg)
 		}
 	}
+}
+
+type ClientMessage struct {
+	Type string      `json:"type"`
+	Data interface{} `json:"data"`
+}
+
+const (
+	StartGameMessageType = "start"
+	KeyMessageType       = "key"
+	RestartMessageType   = "restart"
+	DataMessageType      = "data"
+	// TimerMessageType     = "timer"
+)
+
+type KeyMessage struct {
+	Key string `json:"key"`
 }
