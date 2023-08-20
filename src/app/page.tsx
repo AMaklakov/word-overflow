@@ -9,10 +9,10 @@ export default function Home() {
   return (
     <div>
       <input value={id} onChange={(e) => setId(e.target.value)} />
-      <Link href={`/${id}?owner=true`} prefetch={false}>
+      <Link href={`/${id}`} prefetch={false}>
         Create Game
       </Link>
-      <Link href={`/${id}`} prefetch={false}>
+      <Link href={`/connect/${id}`} prefetch={false}>
         Join Game
       </Link>
     </div>
