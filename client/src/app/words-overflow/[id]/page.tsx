@@ -23,7 +23,6 @@ export default function OnlineSever({ params }: any) {
       map((message) => (message as IDataMessage).data!)
     )
   )
-  const [timeout, initialTimeout] = useMemo(() => [data?.timeout || 0, data?.config.timeout || 0], [data])
   const [cpm = 0] = useObservableState(() =>
     socket$.pipe(
       filter((message) => message.type === 'cpm'),
@@ -39,7 +38,7 @@ export default function OnlineSever({ params }: any) {
 
   const handleSendKey = (key: string) => socket$.next({ type: 'key', data: key })
 
-  if (timeout && timeout == initialTimeout) {
+  if (data?.status === 'idle') {
     return (
       <div>
         <h2>Waiting for a friend to connect...</h2>
@@ -49,8 +48,8 @@ export default function OnlineSever({ params }: any) {
       </div>
     )
   }
-  if (timeout) {
-    return <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-5xl">{timeout}</div>
+  if (data?.timeout) {
+    return <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-5xl">{data.timeout}</div>
   }
   if (data) {
     return (

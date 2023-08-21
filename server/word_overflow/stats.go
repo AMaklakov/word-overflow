@@ -22,5 +22,7 @@ func (g *Game) UpdateStats() {
 		stats = append(stats, &Stat{Color: p.Color, Words: words})
 	}
 	g.Stats = stats
-	g.IsEnd = totalWritten == len(g.Words)
+	if totalWritten == len(g.Words) {
+		g.Status = statusFinished
+	}
 }

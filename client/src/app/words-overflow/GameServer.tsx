@@ -16,15 +16,15 @@ interface Props {
 
 export default function Game(props: Props) {
   const { data, onEnd, sendKey, onRestart, statistics } = props
-  const { words, stats, isEnd } = data
+  const { words, stats, status } = data
 
-  useLetterEvent(sendKey, !isEnd)
+  useLetterEvent(sendKey, status === 'running')
 
   return (
     <>
       <Words words={words} />
       <Stats stats={stats} statistics={statistics} />
-      {isEnd && <GameOver stats={stats} onEnd={onEnd} onRestart={onRestart} />}
+      {status === 'finished' && <GameOver stats={stats} onEnd={onEnd} onRestart={onRestart} />}
     </>
   )
 }

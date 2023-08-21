@@ -15,7 +15,7 @@ type Game struct {
 	Stats    []*Stat           `json:"stats"`
 	Players  []*Player         `json:"players"`
 	Config   *Config           `json:"config"`
-	IsEnd    bool              `json:"isEnd"`
+	Status   status            `json:"isEnd"`
 	Timeout  int               `json:"timeout"`
 	EventsCh chan *GameMessage `json:"-"`
 }
@@ -27,7 +27,7 @@ func NewGame(id string, config *Config) *Game {
 		Stats:    make([]*Stat, 0),
 		Players:  make([]*Player, 0),
 		Config:   config,
-		IsEnd:    false,
+		Status:   statusIdle,
 		Timeout:  config.Timeout,
 		EventsCh: make(chan *GameMessage, 10),
 	}
@@ -41,7 +41,7 @@ func (g *Game) init() {
 		words[i] = NewWord(text, "")
 	}
 
-	g.IsEnd = false
+	g.Status = statusIdle
 	g.Timeout = g.Config.Timeout
 	g.Words = words
 
@@ -62,17 +62,17 @@ func (g *Game) ProcessEvents() {
 	for m := range g.EventsCh {
 		switch m.Type {
 		case ClientTypeKey:
-			if !g.canPlay() {
-				continue
-			}
-
-			key := m.Payload.(string)
-			player := g.findPlayer(m.Player)
-			if updated := g.processKey(key, m.Player); updated {
-				g.NotifyPlayers()
-				player.Analyze(key, analyzers.StatusSuccess)
-			} else {
-				player.Analyze(key, analyzers.StatusError)
+			if g.Status == statusRunning {
+				key := m.Payload.(string)
+				player := g.findPlayer(m.Player)
+				if updated := g.processKey(key, m.Player); updated {
+					g.NotifyPlayers()
+					if player != nil {
+						player.Analyze(key, analyzers.StatusSuccess)
+					}
+				} else if player != nil {
+					player.Analyze(key, analyzers.StatusError)
+				}
 			}
 
 		case ClientTypeRestart:
@@ -129,9 +129,10 @@ func (g *Game) NotifyPlayers() {
 
 // TODO: send game timeout as a separate message
 func (g *Game) Start() {
-	if g.Timeout != g.Config.Timeout {
+	if g.Status != statusIdle {
 		return
 	}
+	g.Status = statusRunning
 
 	for i := g.Config.Timeout; i > 0; i-- {
 		g.Timeout--
@@ -161,10 +162,6 @@ func (g *Game) processKey(key, color string) bool {
 	}
 	// Nothing is updated
 	return false
-}
-
-func (g *Game) canPlay() bool {
-	return !g.IsEnd && g.Timeout == 0
 }
 
 var Colors = []string{

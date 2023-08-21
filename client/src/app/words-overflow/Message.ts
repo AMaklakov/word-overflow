@@ -31,7 +31,7 @@ export interface IStateData {
   id: string
   words: IWord[]
   stats: IStats
-  isEnd: boolean
+  status: 'idle' | 'running' | 'finished'
   timeout: number
   config: {
     timeout: number
