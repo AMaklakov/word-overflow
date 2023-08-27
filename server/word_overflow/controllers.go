@@ -6,46 +6,32 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
-	"sync"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/gorilla/websocket"
 )
 
-const (
-	ID_LENGTH = 4
-)
+const ID_LENGTH = 4
 
-var stateLock sync.RWMutex = sync.RWMutex{}
-var State = make(globalState, 0)
+func (s *Server) handleGetGame(w http.ResponseWriter, r *http.Request) {
+	gameId := chi.URLParam(r, "id")
+	game := s.state.Get(gameId)
 
-type globalState map[string]*Game
+	if game == nil {
+		common.WriteError(w, http.StatusNotFound, "No such game")
+		return
+	}
 
-func (g globalState) Get(id string) *Game {
-	stateLock.RLock()
-	defer stateLock.RUnlock()
+	if !game.CanJoin() {
+		common.WriteError(w, http.StatusForbidden, "Max game connections reached")
+		return
+	}
 
-	game := g[id]
-	return game
+	common.WriteJSON(w, http.StatusOK, game)
 }
 
-func (g globalState) Set(game *Game) {
-	stateLock.Lock()
-	defer stateLock.Unlock()
-
-	g[game.Id] = game
-}
-
-func (g globalState) Delete(id string) {
-	stateLock.Lock()
-	defer stateLock.Unlock()
-
-	delete(g, id)
-}
-
-func handlePostGame(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handlePostGame(w http.ResponseWriter, r *http.Request) {
 	gameId := getId(ID_LENGTH)
-	for State.Get(gameId) != nil {
+	for s.state.Get(gameId) != nil {
 		gameId = getId(ID_LENGTH)
 	}
 
@@ -56,14 +42,14 @@ func handlePostGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	game := NewGame(gameId, &config)
-	State.Set(game)
+	s.state.Set(game)
 
 	common.WriteJSON(w, http.StatusOK, game)
 }
 
-func handleGetGame(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleGetSocket(w http.ResponseWriter, r *http.Request) {
 	gameId := chi.URLParam(r, "id")
-	game := State.Get(gameId)
+	game := s.state.Get(gameId)
 
 	if game == nil {
 		common.WriteError(w, http.StatusNotFound, "No such game")
@@ -75,33 +61,7 @@ func handleGetGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	common.WriteJSON(w, http.StatusOK, game)
-}
-
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  0,
-	WriteBufferSize: 0,
-	CheckOrigin: func(r *http.Request) bool {
-		return true // Пропускаем любой запрос
-	},
-}
-
-func handleGetSocket(w http.ResponseWriter, r *http.Request) {
-	gameId := chi.URLParam(r, "id")
-	game := State.Get(gameId)
-
-	// Create a new game if needed
-	if game == nil {
-		common.WriteError(w, http.StatusNotFound, "No such game")
-		return
-	}
-	// Already full, rejecting
-	if !game.CanJoin() {
-		common.WriteError(w, http.StatusForbidden, "Max game connections reached")
-		return
-	}
-
-	conn, err := upgrader.Upgrade(w, r, nil)
+	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		common.WriteError(w, http.StatusInternalServerError, "Cannot upgrade connection to WS")
 		return
@@ -124,7 +84,7 @@ func handleGetSocket(w http.ResponseWriter, r *http.Request) {
 		if hasPlayers := game.DeletePlayer(player.Color); !hasPlayers {
 			log.Println("Deleting game ", gameId)
 			game.Destroy()
-			State.Delete(gameId)
+			s.state.Delete(gameId)
 		}
 	}()
 

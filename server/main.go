@@ -12,11 +12,14 @@ const PORT = "0.0.0.0:5000"
 
 func main() {
 	r := chi.NewRouter()
-	word_overflow.NewRouter(r, "words-overflow")
+
 	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
 		common.WriteJSON(w, 200, &struct {
 			Message string `json:"message"`
 		}{"Pong"})
 	})
+
+	word_overflow.NewServer().Group(r, "words-overflow")
+
 	http.ListenAndServe(PORT, r)
 }

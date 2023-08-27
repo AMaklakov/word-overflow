@@ -11,10 +11,11 @@ import (
 )
 
 func TestConcurrentGameWrites(t *testing.T) {
-	gamesToCreate := 100
+	N := 100
+	wg := sync.WaitGroup{}
 
-	var wg sync.WaitGroup
-	for i := 0; i < gamesToCreate; i++ {
+	server := NewServer()
+	for i := 0; i < N; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -24,10 +25,10 @@ func TestConcurrentGameWrites(t *testing.T) {
 				assert.Fail(t, err.Error())
 			}
 
-			handlePostGame(httptest.NewRecorder(), httptest.NewRequest("POST", "/", bytes.NewReader(config)))
+			server.handlePostGame(httptest.NewRecorder(), httptest.NewRequest("POST", "/", bytes.NewReader(config)))
 		}()
 	}
 	wg.Wait()
 
-	assert.Equal(t, gamesToCreate, len(State))
+	assert.Equal(t, N, len(server.state.state))
 }
