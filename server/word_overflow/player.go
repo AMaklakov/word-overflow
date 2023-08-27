@@ -19,6 +19,15 @@ func NewPlayer(color string) *Player {
 	}
 }
 
+// TODO: this is a hack
+// Required not to keep tracking when the game is end and a user restarts a game.
+func (p *Player) init() {
+	p.analyzers = []analyzers.Analyzer{
+		analyzers.NewCpmAnalyzer(),
+		analyzers.NewTyposAnalyzer(),
+	}
+}
+
 func (p *Player) Analyze(key string, status analyzers.KeyStatus) {
 	for _, a := range p.analyzers {
 		message := ClientMessage(a.Analyze(key, status))

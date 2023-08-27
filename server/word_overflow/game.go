@@ -45,6 +45,10 @@ func (g *Game) init() {
 	g.Timeout = g.Config.Timeout
 	g.Words = words
 
+	for _, p := range g.Players {
+		p.init()
+	}
+
 	go g.ProcessEvents()
 }
 
