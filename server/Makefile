@@ -12,7 +12,8 @@ start: build
 	./.bin/words-overflow
 
 test: install
-	go test ./...
+	go clean -testcache
+	go test -race -cover ./... 
 
 bench:
 	rm -rf old.txt

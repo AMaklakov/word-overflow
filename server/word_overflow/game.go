@@ -82,8 +82,14 @@ func (g *Game) ProcessEvents() {
 			return
 
 		default:
-			log.Fatal("Unsupported message type", m.Type, m)
+			// TODO: no panic, please
+			log.Panic("Unsupported message type: ", m.Type)
 		}
+	}
+
+	// if events channel is closed, close all the players channels
+	for _, p := range g.Players {
+		close(p.Ch)
 	}
 }
 
@@ -123,7 +129,7 @@ func (g *Game) DeletePlayer(color string) (ok bool) {
 func (g *Game) NotifyPlayers() {
 	g.UpdateStats()
 	for _, p := range g.Players {
-		p.Ch <- &ClientMessage{ClientTypeData, g}
+		p.Ch <- &ClientMessage{ClientTypeData, *g}
 	}
 }
 
