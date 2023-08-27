@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"sync"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/websocket"
@@ -15,29 +16,54 @@ const (
 	ID_LENGTH = 4
 )
 
-var Games = make(map[string]*Game, 0)
+var stateLock sync.RWMutex = sync.RWMutex{}
+var State = make(globalState, 0)
 
-func CreateGame(w http.ResponseWriter, r *http.Request) {
+type globalState map[string]*Game
+
+func (g globalState) Get(id string) *Game {
+	stateLock.RLock()
+	defer stateLock.RUnlock()
+
+	game := g[id]
+	return game
+}
+
+func (g globalState) Set(game *Game) {
+	stateLock.Lock()
+	defer stateLock.Unlock()
+
+	g[game.Id] = game
+}
+
+func (g globalState) Delete(id string) {
+	stateLock.Lock()
+	defer stateLock.Unlock()
+
+	delete(g, id)
+}
+
+func handlePostGame(w http.ResponseWriter, r *http.Request) {
 	gameId := getId(ID_LENGTH)
-	for Games[gameId] != nil {
+	for State.Get(gameId) != nil {
 		gameId = getId(ID_LENGTH)
 	}
 
 	var config Config
 	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
-		common.WriteError(w, http.StatusBadRequest, "Request body is not valid")
+		common.WriteError(w, http.StatusBadRequest, "Request body is not valid "+err.Error())
 		return
 	}
 
 	game := NewGame(gameId, &config)
-	Games[gameId] = game
+	State.Set(game)
 
 	common.WriteJSON(w, http.StatusOK, game)
 }
 
-func GetGame(w http.ResponseWriter, r *http.Request) {
+func handleGetGame(w http.ResponseWriter, r *http.Request) {
 	gameId := chi.URLParam(r, "id")
-	game := Games[gameId]
+	game := State.Get(gameId)
 
 	if game == nil {
 		common.WriteError(w, http.StatusNotFound, "No such game")
@@ -60,9 +86,9 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-func GetSocket(w http.ResponseWriter, r *http.Request) {
+func handleGetSocket(w http.ResponseWriter, r *http.Request) {
 	gameId := chi.URLParam(r, "id")
-	game := Games[gameId]
+	game := State.Get(gameId)
 
 	// Create a new game if needed
 	if game == nil {
@@ -98,7 +124,7 @@ func GetSocket(w http.ResponseWriter, r *http.Request) {
 		if hasPlayers := game.DeletePlayer(player.Color); !hasPlayers {
 			log.Println("Deleting game ", gameId)
 			game.Destroy()
-			delete(Games, gameId)
+			State.Delete(gameId)
 		}
 	}()
 

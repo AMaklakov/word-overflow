@@ -6,10 +6,16 @@ type Config struct {
 	Timeout int `json:"timeout"`
 }
 
-func NewDefaultConfig() *Config {
-	return &Config{
+func NewConfig(modifiers ...func(c *Config)) *Config {
+	config := &Config{
 		Words:   20,
 		Players: 2,
 		Timeout: 10,
 	}
+
+	for _, f := range modifiers {
+		f(config)
+	}
+
+	return config
 }

@@ -24,9 +24,9 @@ func NewRouter(r *chi.Mux, prepend string) {
 		}))
 
 		r.Route("/"+prepend, func(r chi.Router) {
-			r.Post("/", CreateGame)
-			r.Get("/{id}", GetGame)
-			r.Get("/{id}/ws", GetSocket)
+			r.Post("/", handlePostGame)
+			r.Get("/{id}", handleGetGame)
+			r.Get("/{id}/ws", handleGetSocket)
 		})
 	})
 }
