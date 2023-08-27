@@ -15,7 +15,7 @@ type Game struct {
 	Stats    []*Stat           `json:"stats"`
 	Players  []*Player         `json:"players"`
 	Config   *Config           `json:"config"`
-	Status   status            `json:"isEnd"`
+	Status   status            `json:"status"`
 	Timeout  int               `json:"timeout"`
 	EventsCh chan *GameMessage `json:"-"`
 }
